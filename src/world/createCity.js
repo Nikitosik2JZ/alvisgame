@@ -1,3 +1,4 @@
+import { restaurants } from './deliveryLocations.js';
 export const WORLD = { width: 2400, height: 2000, spawn: { x: 1200, y: 1000 } };
 
 export function createCity(scene) {
@@ -52,6 +53,8 @@ export function createCity(scene) {
     { x: 2170, y: 1150, w: 150, h: 310, color: 0x819eac, name: 'HOMES' },
   ];
   for (const block of blocks) {
+    const restaurant = restaurants.find((place) => place.building === block.name);
+    if (restaurant) { block.name = restaurant.name; block.color = restaurant.color; }
     art.fillStyle(0x233e36, 0.18).fillRoundedRect(block.x + 8, block.y + 10, block.w, block.h, 4);
     const building = scene.add.rectangle(block.x, block.y, block.w, block.h, block.color).setOrigin(0);
     buildings.add(building);

@@ -2,6 +2,10 @@ import Phaser from 'phaser';
 import { Courier } from '../entities/Courier.js';
 import { createCity, WORLD } from '../world/createCity.js';
 import { gameState } from '../state/GameState.js';
+import { createDeliveryLocations, restaurants, customers } from '../world/deliveryLocations.js';
+import { OrderManager } from '../managers/OrderManager.js';
+import { OrderUI } from '../ui/OrderUI.js';
+import { ObjectiveMarker } from '../ui/ObjectiveMarker.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -15,15 +19,17 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.buildings);
     this.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
     this.cameras.main.startFollow(this.player, true);
-    const unsubscribe = gameState.subscribe(({ money, level, reputation }) => {
-      document.querySelector('#money').textContent = `${money} ₽`;
-      document.querySelector('#level').textContent = level;
-      document.querySelector('#reputation').textContent = reputation;
-    });
-    this.events.once('shutdown', unsubscribe);
+    createDeliveryLocations(this);
+    this.orders = new OrderManager({ restaurants, customers, state: gameState, debug: import.meta.env.DEV });
+    this.orderUI = new OrderUI(this, this.orders, gameState, this.player);
+    this.objectiveMarker = new ObjectiveMarker(this, this.orders);
+    this.orders.generate();
   }
 
-  update() {
+  update(time) {
     this.player.update();
+    this.orders.update();
+    this.orderUI.update();
+    this.objectiveMarker.update(time);
   }
 }

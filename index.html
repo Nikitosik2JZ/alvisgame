@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -13,13 +13,26 @@
       <div class="eyebrow">КУРЬЕРСКАЯ ИМПЕРИЯ</div>
       <h1>Courier Empire<span class="local-badge">LOCAL</span></h1>
       <div class="stats">
-        <span>Money: <strong id="money">0 ₽</strong></span>
-        <span>Level: <strong id="level">1</strong></span>
-        <span>Reputation: <strong id="reputation">0</strong></span>
+        <span>Деньги: <strong id="money">0 ₽</strong></span>
+        <span>Уровень: <strong id="level">1</strong></span>
+        <span>Репутация: <strong id="reputation">0</strong></span>
       </div>
+      <div id="xp" class="xp">0 / 100 XP</div>
     </header>
-    <aside class="guide"><span class="status-dot"></span> WALKING COURIER <span class="guide-divider">/</span> Explore the neighborhood</aside>
-    <footer class="controls-hint"><kbd>W A S D</kbd><span>or</span><kbd>↑ ← ↓ →</kbd><span>to walk</span></footer>
+    <section id="order-panel" class="order-panel" aria-label="Текущий заказ">
+      <strong id="objective" aria-live="polite"></strong>
+      <div id="order-offer">
+        <p id="offer-restaurant"></p>
+        <p id="offer-details"></p>
+        <button id="accept-order">ПРИНЯТЬ</button>
+      </div>
+      <div id="distance" hidden></div>
+      <div id="timer" hidden></div>
+      <p id="result" role="status" hidden></p>
+    </section>
+    <button id="interact" class="interact" hidden>ЗАБРАТЬ ЗАКАЗ · E</button>
+    <aside class="guide"><span class="status-dot"></span> Следуйте к маркеру заказа</aside>
+    <footer class="controls-hint"><kbd>W A S D</kbd><kbd>↑ ← ↓ →</kbd><span>Движение · E — действие</span></footer>
     <nav class="touch-controls" aria-label="Movement controls">
       <button data-direction="up" aria-label="Walk up">↑</button>
       <button data-direction="left" aria-label="Walk left">←</button>

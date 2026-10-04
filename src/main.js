@@ -3,7 +3,7 @@ import './style.css';
 import { BootScene } from './scenes/BootScene.js';
 import { GameScene } from './scenes/GameScene.js';
 
-new Phaser.Game({
+export const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#8ca77b',

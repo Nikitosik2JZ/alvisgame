@@ -1,85 +1,77 @@
 # Courier Empire / Курьерская Империя
 
-First playable foundation: a top-down walking courier in a small placeholder city.
-JavaScript ES modules, Phaser 3, Vite. All visuals are original Phaser shapes;
-no downloaded assets, backend, or Yandex Games SDK.
+A playable courier loop built on the existing Phaser 3 / Vite city, Arcade Physics collisions, shared GameState and LOCAL PlatformService. All visuals are original placeholder shapes.
 
-## Install and run
+## Run
 
-Install Node.js 22.12+ (or 20.19+), which includes npm. From the project folder:
+Node.js 22.12+ or 20.19+ and npm:
 
 ```sh
 npm install
 npm run dev
-```
-
-Open the local URL printed by Vite (normally http://localhost:5173).
-The city starts immediately. The dev server binds to all interfaces so you can
-also open `http://YOUR_COMPUTER_LAN_IP:5173` on a phone on the same network.
-
-```sh
 npm run build
 npm run preview
+npm test
 ```
 
-`build` writes a production build to `dist/`; `preview` serves that build locally.
+Open the URL printed by Vite. The dev server supports phone testing over the same LAN. The canvas resizes with the window and orientation.
 
-## Controls
+## Controls and gameplay
 
-- Desktop: WASD or arrow keys. Diagonal movement keeps the same speed.
-- Mobile / narrow screens: hold the on-screen direction buttons. Hold two for diagonal movement.
-- The camera follows the courier. Buildings and city boundaries block movement.
-- Grass, roads, sidewalks, and the park are walkable. Trees are decorative.
+- Move with WASD / arrows. Touch devices or narrow screens show direction buttons; holding two allows normalized diagonal movement.
+- Click **ПРИНЯТЬ** to accept the offer. Orders are never automatically accepted; offers do not expire.
+- Follow the yellow restaurant ring and edge arrow. HUD shows distance and remaining time.
+- Within 60 pixels of the entrance, press **E** or **ЗАБРАТЬ ЗАКАЗ**.
+- Follow the blue customer marker. Press **E** or **ПЕРЕДАТЬ ЗАКАЗ** within its zone.
+- Success grants money, total XP and reputation once. Level-up appears in the result.
+- After 3 seconds a new offer appears and requires acceptance.
 
-The canvas fills the window and resizes with it, including portrait/landscape
-changes. Movement stops when the tab loses focus.
+To test failure, accept an order and let its timer reach zero (60–120 seconds). Failure grants no money or XP and subtracts 2 reputation. Negative reputation is supported. After 3 seconds another offer appears. An expired order cannot be delivered on the expiry frame.
 
-## Project structure
+The timer starts at acceptance and continues during pickup. A monotonic wall-clock deadline continues while the tab is inactive; expiry is processed on resume. Movement stops on blur or visibility loss.
+
+## Balance and progression
+
+All tuning lives in `src/config/gameBalance.js`. Distance is straight-line restaurant-to-customer pixels multiplied by 0.4, rounded to meters; it does not account for building detours.
+
+- Money: round(100 + distance × 0.22), clamped to 100–300 ₽.
+- XP: round(15 + distance × 0.025), clamped to 15–40.
+- Reputation: 1 + floor(distance / 250), clamped to 1–4.
+- Time: round(60 + distance / 12), clamped to 60–120 seconds.
+- Total XP for level L: 25 × (L − 1) × (L + 2). Levels 2, 3, 4 require 100, 250, 450 total XP. XP is never consumed.
+
+## Structure
 
 ```text
-index.html                      Page, accessible HUD, touch buttons
-package.json                    Scripts and two direct dependencies
-package-lock.json               Reproducible dependency versions
-src/
-  main.js                       Phaser configuration and scene registration
-  style.css                     Responsive page/HUD styles
-  scenes/
-    BootScene.js                Local platform initialization and courier texture
-    GameScene.js                World, collisions, camera, and HUD binding
-  entities/
-    Courier.js                  Keyboard/touch input and physics movement
-  world/
-    createCity.js               City layout, original shapes, static obstacles
-  state/
-    GameState.js                Shared money, level, xp, reputation
-  services/
-    PlatformService.js          LOCAL platform adapter
+index.html                         Accessible HUD, offer, result, touch buttons
+src/main.js                        Phaser setup and scenes
+src/scenes/BootScene.js             LOCAL initialization, courier texture
+src/scenes/GameScene.js             World, collisions, camera, system composition
+src/entities/Courier.js             Existing keyboard/touch movement
+src/world/createCity.js            Existing city and static building bodies
+src/world/deliveryLocations.js     3 restaurants, 6 customers, reachable entrances
+src/managers/OrderManager.js        Generation, transitions, deadlines, rewards
+src/ui/OrderUI.js                   DOM HUD, offer, interaction, result, level-up
+src/ui/ObjectiveMarker.js           Pulsing ring and off-screen direction
+src/config/gameBalance.js           Economy, timing, interaction, levels
+src/state/GameState.js              Shared progression and serialization
+src/services/PlatformService.js     Existing LOCAL adapter
+tests/orders.test.js                Lifecycle, failure, rewards, levels, saves
+tests/browser-check.cjs              Browser integration and responsive checks
 ```
 
-## Scope and extension points
+Order states: AVAILABLE → ACCEPTED → PICKED_UP → DELIVERED. ACCEPTED and PICKED_UP can transition to FAILED. Only one offer or active order exists. Restaurants reuse existing colored buildings and their static bodies; entrances and customers sit outside obstacles on walkable ground.
 
-The world is 2400 × 2000 pixels. Courier speed is 220 pixels/second, integrated
-by Arcade Physics. Buildings use static rectangular bodies; the courier uses
-a small rectangular body independent of its visual facing direction.
+`GameState.getSaveData()` returns money, level, total XP and reputation. `loadSaveData(data)` validates finite numeric values and derives level from XP to repair inconsistent saved levels. Active orders are excluded. PlatformService retains localStorage support; automatic saving/loading is not enabled. Development-only logs report transitions and rewards without frame spam.
 
-`gameState.getSnapshot()`, `update(changes)`, and `subscribe(listener)` own all
-progression values. The prototype starts with money 0, level 1, xp 0, reputation 0;
-exploring does not increase these values yet.
+## Verification
 
-`platformService` exposes initialization, local save/load, language, authentication,
-ad, and leaderboard entry points. Save/load uses localStorage with graceful
-failure when storage is unavailable. The prototype does not automatically load
-or save progression yet. Authentication, ads, and leaderboard methods return
-explicit unsupported LOCAL results and have no external side effects.
+`npm test` covers acceptance, proximity, duplicate rewards, expiry before/after pickup, next offers, level thresholds, save validation and all 18 restaurant/customer combinations.
 
-No orders, NPCs, vehicles, leveling gameplay, idle/tycoon mechanics, real ads,
-audio, authentication, leaderboards, or SDK integration are implemented.
+Optional browser integration requires an independently installed `playwright-core` and Chrome. Set `PLAYWRIGHT_MODULE` to the module path, `GAME_URL` to the dev URL, and optionally `CHROME_PATH`, then run `node tests/browser-check.cjs`. It walks a physical delivery route and checks collisions, keyboard pickup, button delivery, rewards, timer, failure and next offers. Repeated deliveries and expiry use accelerated setup for level-up/failure UI checks. Touch-capable responsive checks cover 390×844, 844×390 and 320×568. Browser errors fail the test. Screenshots are ignored local test artifacts.
 
-## Prototype verification
+Build and browser checks pass. Vite retains the existing Phaser bundle warning (roughly 1.2 MB minified), which does not prevent a successful production build.
 
-Verified npm install, npm run dev, and npm run build. Browser checks covered
-WASD, arrow keys, camera tracking, sustained movement against a building,
-pointer-pad movement, and canvas resizing at desktop, 390 × 844 portrait,
-and 844 × 390 landscape sizes. No browser console warnings or errors were observed.
-Vite reports a large-chunk warning because Phaser is bundled (about 1.2 MB
-minified / 322 KB gzipped); the production build succeeds.
+## Limits
+
+Placeholder city and customer circles, approximate distance, one order, no route planner or automatic saves. No vehicles, businesses, employees, inventory, skins, multiplayer, Yandex SDK, ads, leaderboards or advanced graphics.
