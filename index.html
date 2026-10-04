@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#182b29" />
+    <title>Courier Empire · Курьерская Империя</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <main id="game" aria-label="Courier Empire city"></main>
+    <header class="hud">
+      <div class="eyebrow">КУРЬЕРСКАЯ ИМПЕРИЯ</div>
+      <h1>Courier Empire<span class="local-badge">LOCAL</span></h1>
+      <div class="stats">
+        <span>Money: <strong id="money">0 ₽</strong></span>
+        <span>Level: <strong id="level">1</strong></span>
+        <span>Reputation: <strong id="reputation">0</strong></span>
+      </div>
+    </header>
+    <aside class="guide"><span class="status-dot"></span> WALKING COURIER <span class="guide-divider">/</span> Explore the neighborhood</aside>
+    <footer class="controls-hint"><kbd>W A S D</kbd><span>or</span><kbd>↑ ← ↓ →</kbd><span>to walk</span></footer>
+    <nav class="touch-controls" aria-label="Movement controls">
+      <button data-direction="up" aria-label="Walk up">↑</button>
+      <button data-direction="left" aria-label="Walk left">←</button>
+      <button data-direction="down" aria-label="Walk down">↓</button>
+      <button data-direction="right" aria-label="Walk right">→</button>
+    </nav>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

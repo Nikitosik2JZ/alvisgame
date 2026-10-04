@@ -1,0 +1,22 @@
+import Phaser from 'phaser';
+import './style.css';
+import { BootScene } from './scenes/BootScene.js';
+import { GameScene } from './scenes/GameScene.js';
+
+new Phaser.Game({
+  type: Phaser.AUTO,
+  parent: 'game',
+  backgroundColor: '#8ca77b',
+  scale: {
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  },
+  physics: {
+    default: 'arcade',
+    arcade: { gravity: { x: 0, y: 0 }, debug: false },
+  },
+  input: { activePointers: 3 },
+  scene: [BootScene, GameScene],
+});
