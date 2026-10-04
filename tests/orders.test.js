@@ -27,7 +27,7 @@ test('explicit acceptance, proximity, single reward, and next offer', () => {
   assert.equal(manager.interact(first.customer), true);
   assert.equal(first.status, ORDER_STATUS.DELIVERED);
   assert.equal(manager.interact(first.customer), false);
-  assert.deepEqual(state.getSnapshot(), { money: first.reward, xp: first.xpReward, reputation: first.reputationReward, level: 1 });
+  assert.deepEqual(state.getSnapshot(), { ...new GameState().getSnapshot(), money: first.reward, xp: first.xpReward, reputation: first.reputationReward });
   advance(BALANCE.nextOrderDelay);
   assert.equal(manager.order.status, ORDER_STATUS.AVAILABLE);
   assert.notEqual(manager.order.id, first.id);
@@ -41,7 +41,7 @@ test('expiry before pickup and after pickup; deadline beats delivery', () => {
     advance(manager.order.deliveryTime * 1000);
     assert.equal(manager.interact(manager.order.customer), false);
     assert.equal(manager.order.status, ORDER_STATUS.FAILED);
-    assert.deepEqual(state.getSnapshot(), { money: 0, xp: 0, reputation: -2, level: 1 });
+    assert.deepEqual(state.getSnapshot(), { ...new GameState().getSnapshot(), reputation: -2 });
     advance(1000);
     assert.equal(state.getSnapshot().reputation, -2);
     advance(BALANCE.nextOrderDelay);
@@ -67,7 +67,7 @@ test('XP boundaries, multi-level reward, serialization and invalid save data', (
   assert.deepEqual(restored.getSaveData(), state.getSaveData());
   assert.equal(restored.loadSaveData(null), false);
   restored.loadSaveData({ money: NaN, xp: -10, reputation: Infinity });
-  assert.deepEqual(restored.getSnapshot(), { money: 0, xp: 0, level: 1, reputation: 0 });
+  assert.deepEqual(restored.getSnapshot(), new GameState().getSnapshot());
 });
 
 test('all restaurant/customer pairs stay within prototype balance ranges', () => {
@@ -76,7 +76,7 @@ test('all restaurant/customer pairs stay within prototype balance ranges', () =>
     const manager = new OrderManager({ restaurants, customers, state: new GameState(), random: () => pick++ === 0 ? (r + 0.5) / restaurants.length : (c + 0.5) / customers.length });
     manager.generate();
     const order = manager.order;
-    assert.ok(order.reward >= 100 && order.reward <= 300);
+    assert.ok(order.reward >= BALANCE.minReward && order.reward <= BALANCE.maxReward);
     assert.ok(order.xpReward >= 15 && order.xpReward <= 40);
     assert.ok(order.reputationReward >= 1 && order.reputationReward <= 4);
     assert.ok(order.deliveryTime >= 60 && order.deliveryTime <= 120);

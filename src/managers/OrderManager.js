@@ -1,4 +1,5 @@
 import { BALANCE } from '../config/gameBalance.js';
+import { calculateDeliveryReward } from './DeliveryRewards.js';
 
 export const ORDER_STATUS = Object.freeze({
   AVAILABLE: 'AVAILABLE', ACCEPTED: 'ACCEPTED', PICKED_UP: 'PICKED_UP', DELIVERED: 'DELIVERED', FAILED: 'FAILED',
@@ -82,9 +83,10 @@ export class OrderManager {
     } else {
       this.order.status = ORDER_STATUS.DELIVERED;
       const previousLevel = this.state.getSnapshot().level;
-      this.state.addRewards(this.order);
+      const payout = calculateDeliveryReward(this.order.reward, this.state.getSnapshot());
+      this.state.addRewards({ ...this.order, reward: payout.total });
       this.nextOrderAt = this.now() + BALANCE.nextOrderDelay;
-      this.emit('completed', { previousLevel, level: this.state.getSnapshot().level });
+      this.emit('completed', { previousLevel, level: this.state.getSnapshot().level, payout });
       this.log('rewards received', this.state.getSnapshot());
     }
     return true;

@@ -33,6 +33,34 @@ kbd { font-family: inherit; padding: 6px 8px; border-radius: 5px; background: #f
 @media (max-height: 450px) { .hud { padding: 10px 16px; } .eyebrow { display: none; } h1 { margin-top: 0; margin-bottom: 8px; } }
 [hidden] { display: none !important; }
 .xp { margin-top: 10px; color: #c3dd9c; font-size: 12px; }
+.hud { max-width: 510px; }
+.hud-actions { display: flex; gap: 8px; margin-top: 12px; pointer-events: auto; }
+.hud-actions button, .progression-dialog button { min-height: 44px; border: 1px solid #c4df8c; border-radius: 8px; padding: 10px 14px; background: #c4df8c; color: #182b29; font-weight: bold; cursor: pointer; touch-action: manipulation; }
+button:disabled { opacity: .6; cursor: default; }
+button:focus-visible { outline: 3px solid #87e4fa; outline-offset: 2px; }
+.progression-goal { font-size: 11px; line-height: 1.5; color: #c3dd9c; margin-top: 10px; max-width: 440px; }
+.progression-dialog { padding: 0; width: min(620px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); color: #eef4e7; background: #182b29; border: 1px solid #627663; border-radius: 14px; overflow: hidden; }
+.progression-dialog::backdrop { background: #071614b8; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #ffffff25; }
+.modal-header h2 { margin: 0; font-size: 20px; }
+.modal-header button { flex-shrink: 0; }
+.modal-content { padding: 12px 16px; max-height: calc(100dvh - 100px); overflow-y: auto; overscroll-behavior: contain; }
+.modal-content > p { margin: 0 0 12px; }
+.goal-card { padding: 12px; background: #344539; border-radius: 8px; line-height: 1.5; }
+.modal-note { font-size: 12px; color: #b5c4bd; }
+#shop-feedback { white-space: pre-line; color: #ffe6a9; line-height: 1.5; }
+#shop-items { display: grid; gap: 10px; }
+.shop-item { border: 1px solid #ffffff25; padding: 14px; border-radius: 10px; }
+.shop-item h3 { margin: 0; font-size: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.shop-item h3 span { color: #ffe6a9; }
+.shop-item p { color: #b5c4bd; font-size: 13px; margin: 10px 0; line-height: 1.5; }
+.shop-item small { display: block; margin-bottom: 10px; line-height: 1.5; color: #c3dd9c; }
+.shop-item button { width: 100%; }
+.shop-item[data-state="LOCKED"] small { color: #ffb49b; }
+#profile-details { display: grid; grid-template-columns: 1fr 1.3fr; gap: 14px; font-size: 14px; margin: 8px 0 24px; }
+#profile-details dt { color: #b5c4bd; }
+#profile-details dd { margin: 0; overflow-wrap: anywhere; }
+.transport-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .order-panel { position: fixed; top: max(20px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); width: 300px; padding: 18px; border: 1px solid #ffffff30; border-radius: 14px; background: #182b29ed; font-size: 14px; line-height: 1.5; }
 .order-panel p { margin: 8px 0; }
 .order-panel button, .interact { min-height: 46px; padding: 12px 18px; border: 1px solid #e4f1a5; border-radius: 10px; background: #c4df8c; color: #182b29; font-weight: bold; cursor: pointer; touch-action: manipulation; }
@@ -45,7 +73,7 @@ kbd { font-family: inherit; padding: 6px 8px; border-radius: 5px; background: #f
 #result { white-space: pre-line; color: #fff4da; }
 @media (max-width: 700px) {
   .stats { flex-wrap: wrap; gap: 5px 14px; }
-  .order-panel { top: 165px; left: 12px; right: 12px; width: auto; padding: 12px 16px; font-size: 13px; }
+  .order-panel { top: var(--hud-bottom, 260px); left: 12px; right: 12px; width: auto; padding: 12px 16px; font-size: 13px; }
 }
 @media (max-height: 450px) {
   .hud { max-width: 48%; }

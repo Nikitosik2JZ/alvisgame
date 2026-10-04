@@ -6,6 +6,10 @@ import { createDeliveryLocations, restaurants, customers } from '../world/delive
 import { OrderManager } from '../managers/OrderManager.js';
 import { OrderUI } from '../ui/OrderUI.js';
 import { ObjectiveMarker } from '../ui/ObjectiveMarker.js';
+import { ShopManager } from '../managers/ShopManager.js';
+import { ShopUI } from '../ui/ShopUI.js';
+import { PlayerProfileUI } from '../ui/PlayerProfileUI.js';
+import { setupDevelopmentCheats } from '../managers/DevelopmentCheats.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -22,6 +26,10 @@ export class GameScene extends Phaser.Scene {
     createDeliveryLocations(this);
     this.orders = new OrderManager({ restaurants, customers, state: gameState, debug: import.meta.env.DEV });
     this.orderUI = new OrderUI(this, this.orders, gameState, this.player);
+    this.shop = new ShopManager(gameState);
+    this.shopUI = new ShopUI(this, this.shop, gameState, this.player);
+    this.profileUI = new PlayerProfileUI(this, gameState, this.player);
+    if (import.meta.env.DEV) setupDevelopmentCheats(this, gameState);
     this.objectiveMarker = new ObjectiveMarker(this, this.orders);
     this.orders.generate();
   }

@@ -13,8 +13,8 @@ export class OrderUI {
     this.result = document.querySelector('#result');
     this.interaction = document.querySelector('#interact');
     this.acceptButton = document.querySelector('#accept-order');
-    this.accept = () => manager.accept();
-    this.interact = () => manager.interact(player);
+    this.accept = () => { if (!player.inputBlocked) manager.accept(); };
+    this.interact = () => { if (!player.inputBlocked) manager.interact(player); };
     this.acceptButton.addEventListener('click', this.accept);
     this.interaction.addEventListener('click', this.interact);
     this.key = scene.input.keyboard.addKey('E');
@@ -47,9 +47,10 @@ export class OrderUI {
       this.objective.textContent = order.status === ORDER_STATUS.DELIVERED ? 'ЗАКАЗ ДОСТАВЛЕН' : 'ВРЕМЯ ВЫШЛО';
       this.result.hidden = false;
       this.result.textContent = order.status === ORDER_STATUS.DELIVERED
-        ? `+${order.reward} ₽ · +${order.xpReward} XP · +${order.reputationReward} репутации`
+        ? `+${extra.payout.total} ₽ · +${order.xpReward} XP · +${order.reputationReward} репутации`
         : `Заказ провален · −${BALANCE.failurePenalty} репутации`;
       if (extra.level > extra.previousLevel) this.result.textContent += `\nНОВЫЙ УРОВЕНЬ! Уровень ${extra.level}`;
+      if (extra.payout?.modifiers.length) this.result.textContent += `\nБазовая оплата: ${extra.payout.baseReward} ₽\n${extra.payout.modifiers.map(modifier => `${modifier.name}: +${modifier.amount} ₽`).join('\n')}\nИтого: ${extra.payout.total} ₽`;
     }
   }
 

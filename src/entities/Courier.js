@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameState } from '../state/GameState.js';
 
 export class Courier extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -7,7 +8,12 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     this.setDepth(3).setCollideWorldBounds(true);
     this.body.setSize(22, 24).setOffset(11, 10);
-    this.speed = 220;
+    this.inputBlocked = false;
+    this.unsubscribeState = gameState.subscribe(({ movementSpeed, transport }) => {
+      this.speed = movementSpeed;
+      this.setTexture(transport === 'BICYCLE' ? 'courier-bicycle' : 'courier');
+      this.body.setSize(22, 24).setOffset(11, 10);
+    });
     this.direction = new Phaser.Math.Vector2();
     this.keys = scene.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT');
     this.touch = new Set();
@@ -16,6 +22,7 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
     for (const button of this.buttons) {
       const down = (event) => {
         event.preventDefault();
+        if (this.inputBlocked) return;
         button.setPointerCapture(event.pointerId);
         this.touch.add(button.dataset.direction);
       };
@@ -36,6 +43,7 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
   }
 
   update() {
+    if (this.inputBlocked) { this.setVelocity(0, 0); return; }
     const keys = this.keys;
     const left = keys.A.isDown || keys.LEFT.isDown || this.touch.has('left');
     const right = keys.D.isDown || keys.RIGHT.isDown || this.touch.has('right');
@@ -49,6 +57,7 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
   }
 
   cleanup() {
+    this.unsubscribeState();
     window.removeEventListener('blur', this.clearInput);
     document.removeEventListener('visibilitychange', this.visibilityHandler);
     for (const { button, down, up } of this.handlers) {

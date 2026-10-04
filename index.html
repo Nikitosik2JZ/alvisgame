@@ -18,6 +18,11 @@
         <span>Репутация: <strong id="reputation">0</strong></span>
       </div>
       <div id="xp" class="xp">0 / 100 XP</div>
+      <nav class="hud-actions" aria-label="Прогресс курьера">
+        <button id="open-shop">МАГАЗИН</button>
+        <button id="open-profile">КУРЬЕР</button>
+      </nav>
+      <div id="bicycle-goal" class="progression-goal"></div>
     </header>
     <section id="order-panel" class="order-panel" aria-label="Текущий заказ">
       <strong id="objective" aria-live="polite"></strong>
@@ -39,6 +44,24 @@
       <button data-direction="down" aria-label="Walk down">↓</button>
       <button data-direction="right" aria-label="Walk right">→</button>
     </nav>
+    <dialog id="shop-dialog" class="progression-dialog" aria-labelledby="shop-title">
+      <div class="modal-header"><h2 id="shop-title">МАГАЗИН</h2><button data-close aria-label="Закрыть магазин">ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content">
+        <p id="shop-money"></p>
+        <p id="shop-goal" class="goal-card"></p>
+        <p class="modal-note">Движение остановлено. Таймер заказа продолжает идти.</p>
+        <p id="shop-feedback" role="status" aria-live="polite"></p>
+        <div id="shop-items"></div>
+      </div>
+    </dialog>
+    <dialog id="profile-dialog" class="progression-dialog" aria-labelledby="profile-title">
+      <div class="modal-header"><h2 id="profile-title">КУРЬЕР</h2><button data-close aria-label="Закрыть профиль">ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content">
+        <dl id="profile-details"></dl>
+        <div class="transport-actions"><button id="equip-walking">ПЕШКОМ</button><button id="equip-bicycle" hidden>ВЕЛОСИПЕД</button></div>
+        <p class="modal-note">Движение остановлено. Таймер заказа продолжает идти.</p>
+      </div>
+    </dialog>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

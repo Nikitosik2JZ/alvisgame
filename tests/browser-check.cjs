@@ -12,14 +12,15 @@ const assert = require('node:assert/strict');
     await page.goto(process.env.GAME_URL || 'http://127.0.0.1:5174');
     await page.waitForSelector('#offer-restaurant');
     await page.waitForFunction(async () => {
-      const { game } = await import('/src/main.js');
-      return game.scene.getScene('GameScene').orders?.order;
+      const { game } = await import(document.querySelector('script[src*="/src/main.js"]').src);
+      return game.scene.getScene('GameScene')?.orders?.order;
     });
-    await page.evaluate(async () => { const { game } = await import('/src/main.js'); window.testScene = game.scene.getScene('GameScene'); });
+    await page.evaluate(async () => { const { game } = await import(document.querySelector('script[src*="/src/main.js"]').src); window.testScene = game.scene.getScene('GameScene'); });
+    await page.waitForTimeout(500); // Let the first physics frames finish after scene creation.
     const inspect = () => page.evaluate(() => ({ x: testScene.player.x, y: testScene.player.y, order: testScene.orders.order }));
     const initial = await inspect();
     await page.keyboard.down('ArrowRight');
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(500);
     await page.keyboard.up('ArrowRight');
     assert.ok((await inspect()).x > initial.x + 20, 'arrow movement');
     await page.evaluate(() => testScene.player.setPosition(530, 600));
@@ -59,8 +60,9 @@ const assert = require('node:assert/strict');
     assert.match(await page.locator('#xp').textContent(), /^(1[5-9]|[2-3]\d|40) \/ 100 XP$/);
     await page.waitForSelector('#accept-order', { state: 'visible' });
     await page.click('#accept-order');
+    await page.waitForTimeout(100); // The timer text is rendered on the next game frame.
     const seconds = await page.locator('#timer').textContent();
-    await page.waitForTimeout(1100);
+    await page.waitForFunction(previous => document.querySelector('#timer').textContent !== previous, seconds, { timeout: 3000 });
     assert.notEqual(await page.locator('#timer').textContent(), seconds, 'timer decreases');
     await page.evaluate(() => { testScene.orders.order.deadline = performance.now() - 1; });
     await page.waitForFunction(() => testScene.orders.order.status === 'FAILED');

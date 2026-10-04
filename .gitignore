@@ -21,3 +21,5 @@ Thumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 tests/*-check.png
+tests/*-dialog-*.png
+tests/bicycle-world.png
