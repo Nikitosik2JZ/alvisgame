@@ -34,7 +34,7 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
     this.clearInput = () => {
       this.touch.clear();
       scene.input.keyboard.resetKeys();
-      this.setVelocity(0, 0);
+      if (this.body) this.setVelocity(0, 0);
     };
     window.addEventListener('blur', this.clearInput);
     this.visibilityHandler = () => { if (document.hidden) this.clearInput(); };
@@ -52,7 +52,7 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
     this.direction.set(Number(right) - Number(left), Number(down) - Number(up)).normalize();
     // Arcade Physics integrates pixels/second using its time step. Normalizing
     // gives diagonal movement the same speed as horizontal/vertical movement.
-    this.setVelocity(this.direction.x * this.speed, this.direction.y * this.speed);
+    this.setVelocity(this.direction.x * this.speed * (this.speedMultiplier || 1), this.direction.y * this.speed * (this.speedMultiplier || 1));
     if (this.direction.lengthSq() > 0) this.setRotation(this.direction.angle() + Math.PI / 2);
   }
 

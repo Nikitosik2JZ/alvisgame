@@ -1,0 +1,124 @@
+import { EVENTS } from '../data/events.js';
+import { EVENT_BALANCE as B } from '../config/eventBalance.js';
+import { DISTRICTS, reputationTier } from '../config/economyConfig.js';
+import { TemporaryModifiers } from './TemporaryModifiers.js';
+
+export class EventManager {
+  constructor(state, orders, random = Math.random, now = () => performance.now()) {
+    this.state = state; this.orders = orders; this.random = random;
+    this.modifiers = new TemporaryModifiers(now); this.history = [];
+    this.negativeStreak = 0; this.serial = 0; this.lastRareNegative = -Infinity;
+    this.lastId = null; this.active = null; this.pending = null;
+    orders.events = this;
+  }
+  eligible(event, checkDeadline = true) {
+    const s = this.state.getSnapshot(), r = event.requirements || {};
+    return (!r.bicycle || s.transport === 'BICYCLE') && (!r.reputation || s.reputation >= r.reputation)
+      && (!r.nearDeadline || !checkDeadline || this.orders.remainingSeconds() <= B.nearDeadline)
+      && (this.negativeStreak < B.maxNegativeStreak || event.category === 'POSITIVE' || event.category === 'NEUTRAL')
+      && (event.category !== 'NEGATIVE' || (this.negativeStreak < B.maxNegativeStreak
+        && (event.rarity !== 'VERY_RARE' || this.serial - this.lastRareNegative >= B.rareNegativeCooldown)));
+  }
+  weighted(pool) {
+    const s = this.state.getSnapshot();
+    const weights = pool.map(e => e.weight
+      * (e.requirements?.food && s.equippedItems.BAG === 'thermobag' ? B.bagRisk : 1)
+      * (e.requirements?.walkingRisk && s.transport === 'WALKING' && s.equippedItems.SHOES === 'good-shoes' ? B.shoesRisk : 1)
+      * (e.category === 'POSITIVE' ? 1 + this.negativeStreak * B.positiveRecoveryWeight : 1));
+    let roll = this.random() * weights.reduce((a, b) => a + b, 0);
+    return pool.find((e, i) => (roll -= weights[i]) < 0) || pool.at(-1);
+  }
+  prepare() {
+    this.pending = null;
+    const district = DISTRICTS[this.state.getSnapshot().selectedDistrict];
+    let roll = this.random(), rarity;
+    for (const [key, chance] of Object.entries(B.rarity)) {
+      if (roll < chance * district.event) { rarity = key; break; }
+      roll -= chance * district.event;
+    }
+    if (!rarity) return;
+    this.pending = this.weighted(EVENTS.filter(e => e.rarity === rarity && e.id !== this.lastId && this.eligible(e, false)));
+  }
+  trigger(moment, resume = () => {}) {
+    let event = this.pending?.trigger === moment ? this.pending : null;
+    if (event) this.pending = null;
+    if (!event && moment === 'customer' && this.orders.order.type === 'FRAGILE' && !this.orders.order.damageChecked) {
+      this.orders.order.damageChecked = true;
+      const bag = this.state.getSnapshot().equippedItems.BAG === 'thermobag';
+      const soup = EVENTS.find(e => e.id === 'soup');
+      if (this.random() < B.fragileDamageRisk * (bag ? B.bagRisk : 1) && this.eligible(soup) && this.lastId !== soup.id) event = soup;
+    }
+    if (!event || !this.eligible(event) || this.active || this.isBlocked?.()) { resume(); return false; }
+    this.active = { event, resume, pausedAt: this.orders.now() }; this.onShow?.(event); return true;
+  }
+  debug(category) {
+    if (this.active || this.isBlocked?.()) return false;
+    const event = this.weighted(EVENTS.filter(e => e.category === category && e.id !== this.lastId && this.eligible(e)));
+    if (!event) return false;
+    this.active = { event, resume: () => {}, pausedAt: this.orders.now() }; this.onShow?.(event); return true;
+  }
+  resolve(choice = 0) {
+    if (!this.active || this.active.resolved) return;
+    const event = this.active.event;
+    const effects = { ...(event.choices?.[choice]?.effects || event.possibleEffects) };
+    const lines = [], s = this.state.getSnapshot(), tier = reputationTier(s.reputation);
+    const range = ([min, max]) => min + Math.floor(this.random() * (max - min + 1));
+    if (effects.dispute) {
+      if (this.random() < tier.dispute) lines.push('ПОДДЕРЖКА НА ВАШЕЙ СТОРОНЕ\nШтраф отменён.');
+      else { effects.money = -B.colaFine; effects.reputation = B.colaReputation; lines.push('Поддержка поверила клиенту.'); }
+    }
+    if (effects.gamble === 'fries') {
+      if (this.random() < B.friesCaught) { effects.money = -B.friesFine; effects.reputation = B.friesReputation; lines.push('Клиент пересчитал картошку. Одной не хватает!'); }
+      else lines.push('Картошка исчезла без свидетелей. Совесть всё видела.');
+    }
+    if (effects.gamble === 'door' || effects.gamble === 'call') {
+      const chance = effects.gamble === 'door' ? B.doorComplaint : 1 - B.callSuccess;
+      if (this.random() < chance) { effects.reputation = B.complaintReputation; lines.push('Клиент пожаловался: «А где торжественная передача?»'); }
+      else lines.push('Клиент получил заказ. Связь с человечеством восстановлена.');
+    }
+    if (effects.tips) effects.money = Math.round(range(effects.tips) * tier.tips);
+    if (effects.reputationRange) effects.reputation = range(effects.reputationRange);
+    if (effects.money) {
+      const actual = effects.money < 0 ? Math.min(s.money, -effects.money) : effects.money;
+      this.state.update({ money: s.money + (effects.money < 0 ? -actual : actual) });
+      lines.push(effects.money < 0 ? `ШТРАФ: ${-effects.money} ₽\nСписано: ${actual} ₽${actual < -effects.money ? '\nБаланс исчерпан' : ''}` : `БОНУС / ЧАЕВЫЕ: +${actual} ₽`);
+    }
+    if (effects.reputation) { this.state.update({ reputation: s.reputation + effects.reputation }); lines.push(`РЕПУТАЦИЯ: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}`); }
+    const order = this.orders.getTarget() ? this.orders.order : null;
+    if (effects.time) {
+      if (order) { order.deadline -= effects.time * 1000; lines.push(`ВРЕМЯ ЗАКАЗА: −${effects.time} сек.`); }
+      else lines.push('Активного заказа нет — время не списано.');
+    }
+    if (effects.payment) {
+      if (order) { order.paymentPenalty = effects.payment; lines.push(`ОПЛАТА ЗАКАЗА: ${Math.round(effects.payment * 100)}%`); }
+      else lines.push('Активного заказа нет — оплата не изменена.');
+    }
+    if (effects.orderBonus) {
+      if (order) { order.extraMoney = (order.extraMoney || 0) + effects.orderBonus; lines.push(`ДОПЛАТА ПРИ УСПЕХЕ: +${effects.orderBonus} ₽`); }
+      else lines.push('Доплата доступна только при активном заказе.');
+    }
+    if (effects.demand) { this.state.setDemand(effects.demand); if (order) order.skipDemand = true; lines.push(`СПРОС: +${B.demandBonus * 100}% на ${effects.demand} следующих успешных заказа`); }
+    if (effects.closeOrder) { this.state.nextCloseOrder = true; lines.push(`СЛЕДУЮЩИЙ ЗАКАЗ: ближайший клиент · +${Math.round((B.closeOrderMoney-1)*100)}% оплаты`); }
+    if (effects.speed) {
+      const kind = effects.speed;
+      const value = kind === 'green' ? B.greenSpeed : kind === 'puncture' ? B.punctureSpeed : s.transport === 'BICYCLE' ? B.rainBicycle : B.rainWalking;
+      const duration = kind === 'green' ? B.greenDuration : kind === 'puncture' ? B.punctureDuration : B.rainDuration;
+      this.modifiers.add(event.id, value, duration, kind === 'puncture' ? 'BICYCLE' : null);
+      lines.push(`СКОРОСТЬ: ${Math.round((value - 1) * 100)}% · ${duration} сек.`);
+    }
+    const bad = (effects.money || 0) < 0 || (effects.reputation || 0) < 0 || effects.time || effects.payment || (effects.speed && effects.speed !== 'green');
+    this.negativeStreak = bad ? this.negativeStreak + 1 : 0;
+    if (bad && event.rarity === 'VERY_RARE') this.lastRareNegative = this.serial + 1;
+    this.serial++; this.lastId = event.id;
+    this.history.unshift({ title: event.title, text: lines.join('\n') || 'Обычная доставка. Без штрафов.', bad: Boolean(bad) });
+    this.history.length = Math.min(this.history.length, B.historyLimit);
+    this.active.resolved = true;
+    return this.history[0].text;
+  }
+  finish() {
+    if (!this.active?.resolved) return;
+    const { resume, pausedAt } = this.active;
+    if (this.orders.getTarget() && Number.isFinite(pausedAt)) this.orders.order.deadline += this.orders.now() - pausedAt;
+    this.active = null; resume();
+  }
+}

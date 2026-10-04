@@ -1,5 +1,6 @@
 import { BALANCE, xpForLevel } from '../config/gameBalance.js';
 import { ORDER_STATUS } from '../managers/OrderManager.js';
+import { ORDER_TYPES } from '../config/economyConfig.js';
 
 export class OrderUI {
   constructor(scene, manager, state, player) {
@@ -31,26 +32,28 @@ export class OrderUI {
 
   render(event, order, extra) {
     const available = order.status === ORDER_STATUS.AVAILABLE;
+    const typeLabel = ORDER_TYPES[order.type]?.name || 'ОБЫЧНЫЙ';
+    const progress = order.type === 'DOUBLE' ? ` · ${order.deliveredCount} / 2 доставлено` : '';
     this.offer.hidden = !available;
     this.result.hidden = true;
     this.interaction.hidden = true;
     this.timer.hidden = true;
     this.distance.hidden = true;
     if (available) {
-      this.objective.textContent = 'НОВЫЙ ЗАКАЗ';
+      this.objective.textContent = `НОВЫЙ ЗАКАЗ · ${typeLabel}`;
       document.querySelector('#offer-restaurant').textContent = order.restaurant.name;
       document.querySelector('#offer-details').textContent = `Доставка: ${order.distance} м · Оплата: ${order.reward} ₽ · Время: ${order.deliveryTime} сек.`;
     } else if (managerIsActive(order)) {
       this.objective.textContent = order.status === ORDER_STATUS.ACCEPTED
-        ? `Заберите заказ в ${order.restaurant.name}` : `Доставьте заказ: ${order.customer.name}`;
+        ? `${typeLabel}${progress} · Заберите заказ в ${order.restaurant.name}` : `${typeLabel}${progress} · Доставьте заказ: ${order.customer.name}`;
     } else {
-      this.objective.textContent = order.status === ORDER_STATUS.DELIVERED ? 'ЗАКАЗ ДОСТАВЛЕН' : 'ВРЕМЯ ВЫШЛО';
+      this.objective.textContent = order.status === ORDER_STATUS.DELIVERED ? `${typeLabel}${progress} · ЗАКАЗ ДОСТАВЛЕН` : 'ВРЕМЯ ВЫШЛО';
       this.result.hidden = false;
       this.result.textContent = order.status === ORDER_STATUS.DELIVERED
         ? `+${extra.payout.total} ₽ · +${order.xpReward} XP · +${order.reputationReward} репутации`
         : `Заказ провален · −${BALANCE.failurePenalty} репутации`;
       if (extra.level > extra.previousLevel) this.result.textContent += `\nНОВЫЙ УРОВЕНЬ! Уровень ${extra.level}`;
-      if (extra.payout?.modifiers.length) this.result.textContent += `\nБазовая оплата: ${extra.payout.baseReward} ₽\n${extra.payout.modifiers.map(modifier => `${modifier.name}: +${modifier.amount} ₽`).join('\n')}\nИтого: ${extra.payout.total} ₽`;
+      if (extra.payout?.modifiers.length) this.result.textContent += `\nБазовая оплата: ${extra.payout.baseReward} ₽\n${extra.payout.modifiers.map(modifier => `${modifier.name}: ${modifier.amount >= 0 ? '+' : ''}${modifier.amount} ₽`).join('\n')}\nИтого: ${extra.payout.total} ₽`;
     }
   }
 

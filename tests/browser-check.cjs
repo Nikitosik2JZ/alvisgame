@@ -16,6 +16,7 @@ const assert = require('node:assert/strict');
       return game.scene.getScene('GameScene')?.orders?.order;
     });
     await page.evaluate(async () => { const { game } = await import(document.querySelector('script[src*="/src/main.js"]').src); window.testScene = game.scene.getScene('GameScene'); });
+    await page.evaluate(() => { testScene.deliveryEvents.random = () => .99; });
     await page.waitForTimeout(500); // Let the first physics frames finish after scene creation.
     const inspect = () => page.evaluate(() => ({ x: testScene.player.x, y: testScene.player.y, order: testScene.orders.order }));
     const initial = await inspect();

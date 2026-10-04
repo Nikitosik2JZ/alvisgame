@@ -32,7 +32,7 @@ The timer starts at acceptance and continues during pickup. A monotonic wall-clo
 
 ## Balance and progression
 
-All tuning lives in `src/config/gameBalance.js`. Distance is straight-line restaurant-to-customer pixels multiplied by 0.4, rounded to meters; it does not account for building detours.
+Economy tuning lives in `src/config/economyConfig.js`; gameBalance.js preserves the BALANCE export and level formulas. Event tuning lives in `src/config/eventBalance.js`. Distance is straight-line restaurant-to-customer pixels multiplied by 0.4, rounded to meters; it does not account for building detours.
 
 - Money: round(150 + distance × 0.30), clamped to 150–290 ₽.
 - XP: round(15 + distance × 0.025), clamped to 15–40.
@@ -62,7 +62,7 @@ tests/browser-check.cjs              Browser integration and responsive checks
 
 Order states: AVAILABLE → ACCEPTED → PICKED_UP → DELIVERED. ACCEPTED and PICKED_UP can transition to FAILED. Only one offer or active order exists. Restaurants reuse existing colored buildings and their static bodies; entrances and customers sit outside obstacles on walkable ground.
 
-`GameState.getSaveData()` returns version 2, money, level, total XP, reputation, ownedItems, equippedItems, transport and calculated movementSpeed. Loading old saves defaults to walking with no items; unknown items and invalid slots are discarded and speed/transport are recalculated from equipment. `loadSaveData(data)` validates finite numeric values and derives level from XP to repair inconsistent saved levels. Active orders are excluded. PlatformService retains localStorage support; automatic saving/loading is not enabled. Development-only logs report transitions and rewards without frame spam.
+`GameState.getSaveData()` returns version 3, unlockedDistricts, selectedDistrict, demandBonusOrders, money, level, total XP, reputation, ownedItems, equippedItems, transport and calculated movementSpeed. Loading old saves defaults to walking with no items; unknown items and invalid slots are discarded and speed/transport are recalculated from equipment. `loadSaveData(data)` validates finite numeric values and derives level from XP to repair inconsistent saved levels. Active orders are excluded. PlatformService retains localStorage support; automatic saving/loading is not enabled. Development-only logs report transitions and rewards without frame spam.
 
 ## Verification
 
@@ -100,3 +100,8 @@ In development only: **F2** grants 1000 ₽; **F3** grants 100 total XP. Each us
 Added modules: data/shopItems.js, managers/ShopManager.js, managers/DeliveryRewards.js, managers/DevelopmentCheats.js, ui/ModalUI.js, ui/ShopUI.js, ui/PlayerProfileUI.js. GameState owns purchases and equipment transactions; ShopManager supplies item availability and UI states. PlatformService remains the LOCAL adapter and automatic saving remains disabled, matching stage 2.
 
 Progression verification: npm test includes purchase rejection/duplicate protection, equipment replacement, bicycle requirements, completion/failure payouts, snapshot isolation, old/corrupt saves and a representative full upgrade path. Run tests/progression-browser.cjs with the same PLAYWRIGHT_MODULE/GAME_URL setup as browser-check.cjs; optionally set PRODUCTION_URL to a Vite preview URL to verify production cheats are disabled. It physically rides a delivery route and checks shop/profile interaction, collision, deadlines, immediate stats/HUD, modal keyboard blocking, touch recovery, scrolling/close accessibility and screenshots at 1280×800, 390×844, 844×390 and 320×568. Browser errors fail the check. Screenshots are ignored local artifacts.
+
+
+## Stage 4: events, order types and districts
+
+See [STAGE4.md](STAGE4.md) for the complete implementation and balance reference, event outcomes, save migration, verification and limitations. Stage 5 is not included.

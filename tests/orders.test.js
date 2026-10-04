@@ -4,6 +4,7 @@ import { GameState } from '../src/state/GameState.js';
 import { OrderManager, ORDER_STATUS } from '../src/managers/OrderManager.js';
 import { restaurants, customers } from '../src/world/deliveryLocations.js';
 import { xpForLevel, BALANCE } from '../src/config/gameBalance.js';
+import { ORDER_TYPES } from '../src/config/economyConfig.js';
 
 function setup() {
   let time = 0;
@@ -76,9 +77,10 @@ test('all restaurant/customer pairs stay within prototype balance ranges', () =>
     const manager = new OrderManager({ restaurants, customers, state: new GameState(), random: () => pick++ === 0 ? (r + 0.5) / restaurants.length : (c + 0.5) / customers.length });
     manager.generate();
     const order = manager.order;
-    assert.ok(order.reward >= BALANCE.minReward && order.reward <= BALANCE.maxReward);
-    assert.ok(order.xpReward >= 15 && order.xpReward <= 40);
-    assert.ok(order.reputationReward >= 1 && order.reputationReward <= 4);
-    assert.ok(order.deliveryTime >= 60 && order.deliveryTime <= 120);
+    const type = ORDER_TYPES[order.type];
+    assert.ok(order.reward >= Math.round(BALANCE.minReward * type.money) && order.reward <= Math.round(BALANCE.maxReward * type.money));
+    assert.ok(order.xpReward >= Math.round(BALANCE.baseXP * type.xp) && order.xpReward <= Math.round(BALANCE.maxXP * type.xp));
+    assert.ok(order.reputationReward >= 1 + type.reputation && order.reputationReward <= 4 + type.reputation);
+    assert.ok(order.deliveryTime >= 60 * type.timer && order.deliveryTime <= 120 * type.timer);
   }
 });

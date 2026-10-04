@@ -7,6 +7,7 @@ export class ModalUI {
     this.opener = document.getElementById(openerId);
     this.closeButton = this.dialog.querySelector('[data-close]');
     this.open = () => {
+      if (document.querySelector('dialog[open]')) return;
       this.blocking = true;
       player.inputBlocked = true;
       player.clearInput();

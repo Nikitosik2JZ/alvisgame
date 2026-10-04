@@ -1,7 +1,10 @@
 import { BALANCE, levelForXP } from '../config/gameBalance.js';
 import { CATEGORIES, TRANSPORT, itemById } from '../data/shopItems.js';
+import { DISTRICTS } from '../config/economyConfig.js';
+import { EVENT_BALANCE } from '../config/eventBalance.js';
 
 const initialState = () => ({ money: 0, level: 1, xp: 0, reputation: 0, movementSpeed: BALANCE.walkingBaseSpeed,
+  unlockedDistricts: ['residential'], selectedDistrict: 'residential', demandBonusOrders: 0,
   transport: TRANSPORT.WALKING, ownedItems: [], equippedItems: { SHOES: null, BAG: null, TRANSPORT: null } });
 
 // One owner for progression. Derived stats are recalculated, never trusted from saves.
@@ -9,7 +12,7 @@ export class GameState {
   constructor() { this.values = initialState(); this.listeners = new Set(); }
 
   getSnapshot() {
-    return { ...this.values, ownedItems: [...this.values.ownedItems], equippedItems: { ...this.values.equippedItems } };
+    return { ...this.values, unlockedDistricts: [...this.values.unlockedDistricts], ownedItems: [...this.values.ownedItems], equippedItems: { ...this.values.equippedItems } };
   }
 
   refresh() {
@@ -63,11 +66,29 @@ export class GameState {
     return true;
   }
 
-  getSaveData() { return { version: 2, ...this.getSnapshot() }; }
+  setDemand(count) { this.values.demandBonusOrders = Math.max(0, Math.floor(count)); this.refresh(); }
+
+  unlockDistrict(id) {
+    const district = Object.hasOwn(DISTRICTS, id) ? DISTRICTS[id] : null;
+    if (!district || this.values.unlockedDistricts.includes(id)) return false;
+    if (this.values.level < district.level || this.values.money < district.cost) return false;
+    this.values.money -= district.cost; this.values.unlockedDistricts.push(id); this.refresh(); return true;
+  }
+
+  selectDistrict(id) {
+    if (!this.values.unlockedDistricts.includes(id)) return false;
+    this.values.selectedDistrict = id; this.refresh(); return true;
+  }
+
+  getSaveData() { return { version: 3, ...this.getSnapshot() }; }
 
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
     this.values = initialState();
+    this.nextCloseOrder = false;
+    if (Array.isArray(data.unlockedDistricts)) this.values.unlockedDistricts = [...new Set(['residential', ...data.unlockedDistricts.filter(id => typeof id === 'string' && Object.hasOwn(DISTRICTS, id))])];
+    if (this.values.unlockedDistricts.includes(data.selectedDistrict)) this.values.selectedDistrict = data.selectedDistrict;
+    if (Number.isFinite(data.demandBonusOrders)) this.values.demandBonusOrders = Math.min(EVENT_BALANCE.demandOrders, Math.max(0, Math.floor(data.demandBonusOrders)));
     if (Array.isArray(data.ownedItems)) this.values.ownedItems = [...new Set(data.ownedItems.filter(id => itemById(id)))];
     for (const category of CATEGORIES) {
       const id = data.equippedItems?.[category];

@@ -83,3 +83,11 @@ button:focus-visible { outline: 3px solid #87e4fa; outline-offset: 2px; }
   .interact { bottom: 135px; }
   .guide { display: none; }
 }
+
+#event-effects, #event-history, #district-list p { white-space: pre-line; line-height: 1.6; }
+#event-buttons { display: grid; gap: 12px; }
+#event-buttons button { width: 100%; white-space: pre-line; line-height: 1.5; }
+.event-dialog .modal-header h2 { overflow-wrap: anywhere; }
+.hud-actions { flex-wrap: wrap; }
+
+@media (max-width: 700px) { .hud-actions button { font-size: 12px; padding: 10px; } }

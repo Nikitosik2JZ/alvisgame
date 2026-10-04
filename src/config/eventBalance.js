@@ -1,0 +1,12 @@
+export const EVENT_BALANCE = {
+  rarity: { COMMON: .20, UNCOMMON: .05, RARE: .03, VERY_RARE: .02 },
+  maxNegativeStreak: 2, rareNegativeCooldown: 5, positiveRecoveryWeight: .5, historyLimit: 5,
+  bagRisk: .2, shoesRisk: .8, fragileDamageRisk: .08, nearDeadline: 10,
+  colaFine: 250, colaReputation: -2, soupPayment: -.3, wrongEntranceTime: 15, barrierTime: 10,
+  rainWalking: .8, rainBicycle: .75, rainDuration: 20, punctureSpeed: .65, punctureDuration: 25,
+  tips: [100, 400], bigTips: [800, 1200], thanks: [3, 5], demandOrders: 3, demandBonus: .25,
+  greenSpeed: 1.15, greenDuration: 30, favoriteMinimum: 50, favoriteMoney: 200, favoriteReputation: 2,
+  callTime: 15, callSuccess: .9, doorComplaint: .15, complaintReputation: -2,
+  stairsMoney: 500, stairsTime: 20, friesCaught: .1, friesFine: 500, friesReputation: -5,
+  closeOrderMoney: 1.05,
+};

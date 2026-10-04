@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
       window.testScene = game.scene.getScene('GameScene');
       return testScene?.orders?.order;
     });
+    await page.evaluate(() => { testScene.deliveryEvents.random = () => .99; });
     await page.waitForTimeout(500);
     const snapshot = () => page.evaluate(() => testScene.orders.state.getSnapshot());
     const pos = () => page.evaluate(() => ({ x: testScene.player.x, y: testScene.player.y }));
@@ -126,7 +127,7 @@ const assert = require('node:assert/strict');
     // Production must have no debug shortcut effects.
     if (process.env.PRODUCTION_URL) {
       await page.goto(process.env.PRODUCTION_URL);
-      await page.waitForFunction(() => document.querySelector('#objective').textContent === 'НОВЫЙ ЗАКАЗ');
+      await page.waitForFunction(() => document.querySelector('#objective').textContent.startsWith('НОВЫЙ ЗАКАЗ'));
       const before = await page.locator('.stats').textContent();
       const xp = await page.locator('#xp').textContent();
       await page.keyboard.press('F2'); await page.keyboard.press('F3');

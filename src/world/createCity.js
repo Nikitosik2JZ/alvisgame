@@ -1,13 +1,15 @@
+import { gameState } from '../state/GameState.js';
 import { restaurants } from './deliveryLocations.js';
 export const WORLD = { width: 2400, height: 2000, spawn: { x: 1200, y: 1000 } };
 
 export function createCity(scene) {
+  const center = gameState.getSnapshot().selectedDistrict === 'center';
   const art = scene.add.graphics();
   const buildings = scene.physics.add.staticGroup();
-  art.fillStyle(0x8ca77b).fillRect(0, 0, WORLD.width, WORLD.height);
+  art.fillStyle(center ? 0x9b9da6 : 0x8ca77b).fillRect(0, 0, WORLD.width, WORLD.height);
 
-  const streetsX = [360, 1200, 2040];
-  const streetsY = [320, 1000, 1680];
+  const streetsX = center ? [360, 1200, 2040, 1960] : [360, 1200, 2040];
+  const streetsY = center ? [320, 1000, 1680, 1800] : [320, 1000, 1680];
   // Sidewalks surround the intersecting road grid.
   art.fillStyle(0xd1ceba);
   for (const x of streetsX) art.fillRect(x - 88, 0, 176, WORLD.height);
@@ -52,7 +54,9 @@ export function createCity(scene) {
     { x: 2170, y: 490, w: 150, h: 300, color: 0xd5b679, name: 'HOMES' },
     { x: 2170, y: 1150, w: 150, h: 310, color: 0x819eac, name: 'HOMES' },
   ];
+  if (center) blocks.push(...[250, 650, 1050, 1450, 1850].map((x, i) => ({ x, y: 100, w: 160, h: 110, color: i % 2 ? 0x7288ac : 0xaf8292, name: 'ОФИСЫ' })));
   for (const block of blocks) {
+    if (center) block.color = 0x8996b4;
     const restaurant = restaurants.find((place) => place.building === block.name);
     if (restaurant) { block.name = restaurant.name; block.color = restaurant.color; }
     art.fillStyle(0x233e36, 0.18).fillRoundedRect(block.x + 8, block.y + 10, block.w, block.h, 4);
@@ -76,7 +80,7 @@ export function createCity(scene) {
     art.fillStyle(0x496d52).fillCircle(x, y, 23);
     art.fillStyle(0x66875b).fillCircle(x - 5, y - 5, 16);
   }
-  scene.add.text(1485, 1465, 'NEIGHBORHOOD PARK', { fontFamily: 'Arial', fontSize: '11px', color: '#344d3c' }).setOrigin(0.5);
+  scene.add.text(1485, 1465, center ? 'СКВЕР · ЦЕНТР' : 'СПАЛЬНЫЙ РАЙОН', { fontFamily: 'Arial', fontSize: '11px', color: '#344d3c' }).setOrigin(0.5);
   // Keep painted roof detail above building rectangles.
   art.setDepth(1);
   return buildings;
