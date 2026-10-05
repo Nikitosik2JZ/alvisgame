@@ -17,9 +17,9 @@ Walking shoes still provide 168 / 176 px/s. Vehicles ignore shoe speed bonuses. 
 
 The garage lists all four transports with ownership/equipped states, speed, price, required level and benefits/disadvantages. Failed purchase attempts explain the level/money requirement. Transactions deduct funds once, permanently add ownership and equip immediately. Duplicate purchases are rejected. Moped/car purchases show a large celebration with ПОЕХАЛИ; background cards are hidden during the celebration to prevent keyboard focus behind it.
 
-Switching owned transport is free. GameState rejects both switching and purchases that would equip a vehicle while ACCEPTED or PICKED_UP. This guard also applies to old shop/profile bicycle controls and F10. Completion/failure releases the guard. An idle vehicle switch replaces the available offer, and acceptance rechecks eligibility.
+Switching owned transport is free. GameState rejects both switching and purchases that would equip a vehicle while ACCEPTED or PICKED_UP. Transport controls now exist only in the garage; F10 also respects this guard. Completion/failure releases the guard. An idle vehicle switch replaces the available offer, and acceptance rechecks eligibility.
 
-The HUD shows current transport/speed and the next major goal with remaining money and level progress. Full money/cost details appear in garage/shop. Career follows the highest permanently owned vehicle, independent of the current equipment choice. The next goal advances beyond that vehicle. Level 6 / 10 availability notices are displayed once and recorded when shown, with a configurable eight-second duration.
+The HUD shows current transport/speed and the next major goal with remaining money and level progress. Full transport money/cost details appear in the garage. Career follows the highest permanently owned vehicle, independent of the current equipment choice. The next goal advances beyond that vehicle. Level 6 / 10 availability notices are displayed once and recorded when shown, with a configurable eight-second duration.
 
 ## Orders and districts
 
@@ -68,15 +68,17 @@ The Large boost persists until an eligible car offer is generated, then is consu
 
 Original Phaser primitive textures distinguish all four transports. Car visual: 58×76 pixels; moped: 48×56. All transports use the same centered 22×24 collision body, normalized directions, world bounds, camera and 60-pixel pickup/drop-off zones. No inertia, steering wheel or realistic driving.
 
-Garage/profile/shop use the existing native dialog focus trap, input blocking and scrollable content. The close button stays reachable on short screens. Mobile keeps the direction buttons and interaction button. Compact phones use a four-column HUD action row; portrait HUD/order panels stack through 900 pixels, while landscape keeps separate panels and visible direction controls.
+Garage/profile/shop use the existing native dialog focus trap, input blocking and scrollable content. The close button stays reachable on short screens. The subsequent mobile UX pass uses a fixed analog joystick, contextual interaction button, collapsible HUD, compact objectives and a secondary menu. Shop is equipment-only; garage is transport-only; courier is read-only; event history opens separately. See README.md for the current mobile layout and screen responsibilities.
 
 ## Save schema and backward compatibility
 
-Save version is 4. Existing key `courier-empire-save-v1` and PlatformService JSON/localStorage adapter are preserved. BootScene loads once before starting gameplay and subscribes to progression changes for automatic saves.
+Save version is now 5 following the screen separation correction. Existing key `courier-empire-save-v1` and PlatformService JSON/localStorage adapter are preserved. BootScene loads once before starting gameplay and subscribes to progression changes for automatic saves.
 
-New fields: `ownedTransports` (always includes WALKING), `equippedTransport`, `transportMilestones` (shown notices), `largeOrderBoost` (pending next-car weighting). Existing money, XP, level, reputation, districts, demand, ownedItems and equipment remain. `transport` remains an alias for compatibility, and the old bicycle equipment/item representation is synchronized. Vehicle ownership has its own domain suitable for future separation from company vehicles.
+Version 5 additionally persists completedOrders, failedOrders, totalMoneyEarned, totalTipsEarned, totalFinesPaid and totalDistanceDelivered; missing legacy counters default to zero.
 
-Legacy `transport: BICYCLE`, bicycle item ownership or an equipped bicycle slot restores permanent bicycle ownership even if old saves omit ownedItems. Old bicycle equipment restores cycling; an explicitly unequipped slot restores walking. Unknown IDs, duplicate ownership and invalid equipped vehicles are sanitized. Level and movement speed are recalculated. New moped/car saves roundtrip all progression fields. Active orders, modal state, collision/input state and temporary speed effects are not serialized. Storage remains local to each origin; unavailable localStorage returns failure through the existing adapter.
+Transport fields: `ownedTransports` (always includes WALKING), `equippedTransport`, `transportMilestones` (shown notices), `largeOrderBoost` (pending next-car weighting). Existing money, XP, level, reputation, districts, demand, ownedItems and equipment remain. `transport` remains an alias for compatibility, and old bicycle equipment/item entries migrate to the transport domain without remaining duplicated in equipment. Vehicle ownership has its own domain suitable for future separation from company vehicles.
+
+Legacy `transport: BICYCLE`, bicycle item ownership or an equipped bicycle slot restores permanent bicycle ownership even if old saves omit ownedItems. Old bicycle equipment restores cycling; an explicit equippedTransport selection takes precedence. Unknown IDs, duplicate ownership and invalid equipped vehicles are sanitized. Level and movement speed are recalculated. New moped/car saves roundtrip all progression fields. Active orders, modal state, collision/input state and temporary speed effects are not serialized. Storage remains local to each origin; unavailable localStorage returns failure through the existing adapter.
 
 ## Development controls
 
@@ -90,7 +92,7 @@ All shortcuts are registered only in development and the setup function also che
 
 ## Verification and limits
 
-29 unit tests pass, including existing progression/order/event regression cases plus purchases, all switching paths, car-only eligibility, all transport/type delivery combinations, district pools, temporary effects, fragile/thermobag composition, save roundtrips/migration and career goals. On hosts that block Node worker spawning, run `node --test --test-isolation=none tests/*.test.js`.
+34 unit tests pass, including existing progression/order/event regression cases plus purchases, all switching paths, car-only eligibility, all transport/type delivery combinations, district pools, temporary effects, fragile/thermobag composition, save roundtrips/migration and career goals. On hosts that block Node worker spawning, run `node --test --test-isolation=none tests/*.test.js`.
 
 `/tests/stage5-browser.html` is a development-only integration harness, excluded from the production bundle. It drives four physical pickup/drop-off routes, checks all vehicle collision bodies and narrow passages, directional/touch movement paths, garage transactions, all eligible types, transport events, rain, active-order guards, local saves and district restarts. It restores the starting progression on completion. Manual UI verification additionally covers desktop, 390×844, 320×568 and 844×390 layouts, garage scrolling/switching, profile/district/event dialogs and production shortcut rejection.
 

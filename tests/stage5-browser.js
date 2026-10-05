@@ -51,7 +51,7 @@ async function verify() {
     check(document.querySelector('#garage-feedback').textContent.includes('уровень 6'), 'moped below level rejected');
     state.update({ xp: 1000, money: 8999 }); click('[data-transport="MOPED"]');
     check(document.querySelector('#garage-feedback').textContent.includes('Не хватает'), 'moped insufficient money rejected');
-    state.update({ money: 12500 }); state.purchaseItem('bicycle'); click('[data-transport="MOPED"]');
+    state.update({ money: 12500 }); state.purchaseTransport('BICYCLE'); click('[data-transport="MOPED"]');
     check(state.getSnapshot().equippedTransport === 'MOPED' && scene.player.speed === 340, 'garage purchase equips moped immediately');
     check(!document.querySelector('#transport-celebration').hidden, 'moped celebration opens');
     check(document.querySelector('#garage-items').hidden && document.querySelector('#garage-dialog').getBoundingClientRect().height >= Math.min(400, innerHeight - 24), 'celebration is large and excludes background cards');

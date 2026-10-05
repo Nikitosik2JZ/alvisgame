@@ -162,7 +162,7 @@ test('fragile protection composes with thermobag and a positive minimum risk', (
   }
 });
 
-test('version 4 roundtrips all vehicles, equipment, milestones and safe legacy migration', () => {
+test('version 5 roundtrips all vehicles, equipment, milestones and safe legacy migration', () => {
   for (const id of ['MOPED', 'CAR']) {
     const { state } = setup(id); state.purchaseItem('thermobag'); state.markTransportMilestone('MOPED'); state.setLargeOrderBoost(B.largeOrderBoost);
     const loaded = new GameState(); loaded.loadSaveData(JSON.parse(JSON.stringify(state.getSaveData())));

@@ -158,7 +158,7 @@ export class OrderManager {
     if (this.events?.active) return;
     if (this.getTarget() && this.now() >= this.order.deadline) {
       this.order.status = ORDER_STATUS.FAILED;
-      this.state.update({ reputation: this.state.getSnapshot().reputation - BALANCE.failurePenalty });
+      this.state.failOrder(BALANCE.failurePenalty);
       this.nextOrderAt = this.now() + BALANCE.nextOrderDelay;
       this.emit('failed');
     }

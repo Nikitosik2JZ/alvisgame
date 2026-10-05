@@ -1,6 +1,5 @@
 import { SHOP_ITEMS } from '../data/shopItems.js';
 import { ModalUI } from './ModalUI.js';
-import { goalText } from '../config/transportConfig.js';
 
 export class ShopUI extends ModalUI {
   constructor(scene, manager, state, player) {
@@ -39,7 +38,5 @@ export class ShopUI extends ModalUI {
       button.disabled = status === 'EQUIPPED';
       // Invalid attempts stay actionable so the player can see their reason.
     }
-    const goal = goalText(player);
-    document.querySelector('#shop-goal').textContent = goal;
   }
 }

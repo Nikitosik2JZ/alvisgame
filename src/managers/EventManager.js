@@ -85,8 +85,7 @@ export class EventManager {
     if (effects.tips) effects.money = Math.round(range(effects.tips) * tier.tips);
     if (effects.reputationRange) effects.reputation = range(effects.reputationRange);
     if (effects.money) {
-      const actual = effects.money < 0 ? Math.min(s.money, -effects.money) : effects.money;
-      this.state.update({ money: s.money + (effects.money < 0 ? -actual : actual) });
+      const actual = this.state.applyEventMoney(effects.money, Boolean(effects.tips));
       lines.push(effects.money < 0 ? `ШТРАФ: ${-effects.money} ₽\nСписано: ${actual} ₽${actual < -effects.money ? '\nБаланс исчерпан' : ''}` : `БОНУС / ЧАЕВЫЕ: +${actual} ₽`);
     }
     if (effects.reputation) { this.state.update({ reputation: s.reputation + effects.reputation }); lines.push(`РЕПУТАЦИЯ: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}`); }

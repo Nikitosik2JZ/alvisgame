@@ -28,7 +28,7 @@ test('explicit acceptance, proximity, single reward, and next offer', () => {
   assert.equal(manager.interact(first.customer), true);
   assert.equal(first.status, ORDER_STATUS.DELIVERED);
   assert.equal(manager.interact(first.customer), false);
-  assert.deepEqual(state.getSnapshot(), { ...new GameState().getSnapshot(), money: first.reward, xp: first.xpReward, reputation: first.reputationReward });
+  assert.deepEqual(state.getSnapshot(), { ...new GameState().getSnapshot(), money: first.reward, xp: first.xpReward, reputation: first.reputationReward, completedOrders: 1, totalMoneyEarned: first.reward, totalDistanceDelivered: first.distance });
   advance(BALANCE.nextOrderDelay);
   assert.equal(manager.order.status, ORDER_STATUS.AVAILABLE);
   assert.notEqual(manager.order.id, first.id);
@@ -42,7 +42,7 @@ test('expiry before pickup and after pickup; deadline beats delivery', () => {
     advance(manager.order.deliveryTime * 1000);
     assert.equal(manager.interact(manager.order.customer), false);
     assert.equal(manager.order.status, ORDER_STATUS.FAILED);
-    assert.deepEqual(state.getSnapshot(), { ...new GameState().getSnapshot(), reputation: -2 });
+    assert.deepEqual(state.getSnapshot(), { ...new GameState().getSnapshot(), reputation: -2, failedOrders: 1 });
     advance(1000);
     assert.equal(state.getSnapshot().reputation, -2);
     advance(BALANCE.nextOrderDelay);

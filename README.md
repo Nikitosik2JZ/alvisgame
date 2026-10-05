@@ -62,7 +62,7 @@ tests/browser-check.cjs              Browser integration and responsive checks
 
 Order states: AVAILABLE → ACCEPTED → PICKED_UP → DELIVERED. ACCEPTED and PICKED_UP can transition to FAILED. Only one offer or active order exists. Restaurants reuse existing colored buildings and their static bodies; entrances and customers sit outside obstacles on walkable ground.
 
-`GameState.getSaveData()` returns version 4 with existing progression/equipment/district fields plus ownedTransports, equippedTransport, transportMilestones and largeOrderBoost. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through the existing LOCAL PlatformService and saves progression changes automatically. Active orders and temporary effects remain session-only. See [STAGE5.md](STAGE5.md) for the schema and migration rules.
+`GameState.getSaveData()` returns version 5 with equipment/district fields, ownedTransports, equippedTransport, transportMilestones, largeOrderBoost and lifetime statistics. Equipment uses only SHOES/BAG; vehicles appear only in ownedTransports. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through the existing LOCAL PlatformService and saves progression changes automatically. Active orders and temporary effects remain session-only. See [STAGE5.md](STAGE5.md) for the schema and migration rules.
 
 ## Verification
 
@@ -78,18 +78,17 @@ Placeholder city and customer circles, approximate distance, one order, no route
 
 ## Stage 3: shop and equipment
 
-Open **МАГАЗИН** or **КУРЬЕР** from the HUD on desktop or mobile. Panels block movement and delivery input; order deadlines continue. Close with the always visible **ЗАКРЫТЬ** button or Escape. The shop scrolls on short screens. HUD and shop show money remaining for the bicycle.
+Open **МАГАЗИН** for equipment, **ГАРАЖ** for transport, **КУРЬЕР** for read-only statistics, or **СОБЫТИЯ** for session event history. On mobile these screens open through the secondary menu. Panels block movement and delivery input; order deadlines continue. Close with the always visible **ЗАКРЫТЬ** button or Escape. The shop scrolls on short screens. HUD and garage show money remaining for the next transport.
 
 | Item | Price | Requirement | Effect |
 | --- | --- | --- | --- |
 | Старые кроссовки | 300 ₽ | None | +5% walking speed |
 | Хорошие кроссовки | 900 ₽ | Own old shoes | +10% walking speed total |
 | Термосумка | 1200 ₽ | None | +10% successful delivery money |
-| Велосипед | 3500 ₽ | Level 3 (250 total XP) | Unlock and equip bicycle |
 
-Purchases validate requirements, ownership and money before deducting funds. Each purchase equips its category automatically. Owned items stay owned; use **ЭКИПИРОВАТЬ** in the shop to switch shoes. The profile switches between walking and an owned bicycle for free.
+Purchases validate requirements, ownership and money before deducting funds. Each purchase equips its category automatically. Owned items stay owned; use **ЭКИПИРОВАТЬ** in the shop to switch shoes. All transport purchases and free switching are available only in the garage. The profile displays equipped items and transport without purchase/equip controls.
 
-Walking speed is 160 pixels/second, 168 with old shoes, 176 with good shoes. Shoe bonuses replace each other and apply only to walking. Bicycle speed is 250; it uses the same body, collisions, normalized movement, camera and delivery zones with an original drawn bicycle texture. Each category (SHOES, BAG, TRANSPORT) has one equipment slot.
+Walking speed is 160 pixels/second, 168 with old shoes, 176 with good shoes. Shoe bonuses replace each other and apply only to walking. Bicycle speed is 250; it uses the same body, collisions, normalized movement, camera and delivery zones with an original drawn bicycle texture. Each equipment category (SHOES, BAG) has one slot. Transport uses its own ownedTransports/equippedTransport fields.
 
 DeliveryRewards calculates rounded modifier lines at successful completion: 200 ₽ base + 20 ₽ bag = 220 ₽. Order offers keep the base payment; failure gives no payout. Money modifiers are additive relative to base reward so later modifiers can be added independently.
 
@@ -108,14 +107,22 @@ See [STAGE4.md](STAGE4.md) for the historical Stage 4 implementation and balance
 
 ## Stage 5: garage and transport progression
 
-See [STAGE5.md](STAGE5.md) for current prices, speeds, order pools, transport events, weather, fragile protection, save migration, debug controls and verification. Open **ГАРАЖ** from the HUD to buy permanent vehicles or switch freely after completing an active order. The bicycle remains available through the existing shop/profile controls. Stage 6 is not implemented.
+See [STAGE5.md](STAGE5.md) for current prices, speeds, order pools, transport events, weather, fragile protection, save migration, debug controls and verification. Open **ГАРАЖ** from the HUD to buy permanent vehicles or switch freely after completing an active order. The bicycle is available only in the garage, alongside walking, moped and car. Stage 6 is not implemented.
 
 ## Mobile UX pass
 
-Compact layout uses `(max-width: 900px), (pointer: coarse)` without user-agent detection. It starts with a 50px status bar; the chevron shows/hides existing HUD details and remembers the choice for the session, including district restarts. The menu contains shop, profile (including event history), garage and districts. Desktop defaults to the expanded HUD and retains WASD, arrow keys and E.
+Compact layout uses `(max-width: 900px), (pointer: coarse)` without user-agent detection. It starts with a 50px status bar; the chevron shows/hides existing HUD details and remembers the choice for the session, including district restarts. The menu contains shop, read-only profile, garage, session event history and districts. Desktop defaults to the expanded HUD and retains WASD, arrow keys and E.
 
 Mobile offers are bottom cards; active objectives sit below the HUD with optional details. Safe-area padding protects the HUD and bottom controls. Dialog content scrolls internally while its header/close control stays reachable. Menus and dialogs clear movement and block gameplay actions; closing requires fresh joystick input.
 
 The fixed bottom-left joystick has a 100–128px translucent base (108px in narrow landscape). `src/input/MovementInput.js` configures a 12% dead zone and maximum 44px radius, capped at `base width / 2 - 20px` to keep the stick inside the base. Beyond the dead zone, strength scales linearly to one; keyboard diagonals and joystick magnitude are capped at one. Transport, equipment, weather and temporary effects still determine speed. Pointer release, cancellation, lost capture, blur, visibility loss and resize reset input.
 
 Run `npm test` and `npm run build`. With an installed playwright-core and Chrome, run `node tests/mobile-ux-browser.cjs` (`PLAYWRIGHT_MODULE`, `CHROME_PATH`, `GAME_URL` optional). Browser checks cover 390×844, 430×932, 844×390, 320×568 and desktop, touch input, modal blocking, delivery, transport speeds and console errors. Screenshots go to `ARTIFACT_DIR` or the system temporary directory. Physical iOS/Android notch and browser-toolbar behavior still need device testing.
+
+## Screen responsibilities and lifetime statistics
+
+The shop catalog and equipment APIs accept only personal items; transport cannot be purchased/equipped through them. The garage is the sole vehicle purchase/selection screen. Courier reads centralized progression, equipment and transport data. Events opens existing session history as a separate read-only dialog.
+
+Save version 5 adds completedOrders, failedOrders, totalMoneyEarned, totalTipsEarned, totalFinesPaid and totalDistanceDelivered. OrderManager records one completion per whole order (including double orders), one failure per expiry, the final payout and the offered route distance in meters. EventManager records actual cash bonuses/tips and actual fines paid after balance clamping. Earnings include successful payouts and positive event money; tips are a subset. Purchases, development credits and loading saves do not count as income. Distance is the sum of completed-order route estimates, not an odometer.
+
+Old counters default to zero; historical totals are not reconstructed. Legacy bicycle entries in ownedItems/equippedItems.TRANSPORT migrate to ownedTransports/equippedTransport and are discarded from equipment. The existing localStorage key remains unchanged. Current saves contain no duplicate vehicle ownership in equipment. Unit checks cover counters, single payment/failure, API separation and old-save migration; `tests/screens-browser.cjs` verifies purchases, read-only profile, menus and automatic reload on desktop and mobile.

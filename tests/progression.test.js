@@ -13,7 +13,7 @@ test('purchases validate funds, prerequisite, level and duplicate ownership atom
   const unchanged = state.getSaveData();
   assert.match(shop.purchase('old-shoes').reason, /Не хватает/);
   assert.match(shop.purchase('good-shoes').reason, /Сначала/);
-  assert.match(shop.purchase('bicycle').reason, /уровень 3/);
+  assert.match(shop.purchase('bicycle').reason, /Предмет не найден/);
   assert.deepEqual(state.getSaveData(), unchanged);
   assert.equal(shop.getItemState('bicycle').status, 'LOCKED');
   state.update({ money: 300 });
@@ -53,19 +53,19 @@ test('one equipment slot replaces bonuses, preserves ownership, and updates subs
 test('bicycle requires level and money, equips immediately, and ignores shoe bonuses', () => {
   const state = new GameState();
   state.update({ money: 10000 });
-  assert.equal(state.purchaseItem('bicycle').ok, false);
+  assert.equal(state.purchaseTransport('BICYCLE').ok, false);
   state.update({ xp: 250, money: 3499 });
-  assert.match(state.purchaseItem('bicycle').reason, /Не хватает/);
+  assert.match(state.purchaseTransport('BICYCLE').reason, /Не хватает/);
   state.update({ money: 4700 });
   state.purchaseItem('old-shoes'); state.purchaseItem('good-shoes');
-  assert.equal(state.purchaseItem('bicycle').ok, true);
+  assert.equal(state.purchaseTransport('BICYCLE').ok, true);
   assert.equal(state.getSnapshot().money, 0);
   assert.equal(state.getSnapshot().transport, 'BICYCLE');
   assert.equal(state.getSnapshot().movementSpeed, 250);
-  state.unequipCategory('TRANSPORT');
+  state.equipTransport('WALKING');
   assert.equal(state.getSnapshot().movementSpeed, 176);
   assert.equal(state.getSnapshot().transport, 'WALKING');
-  state.equipItem('bicycle');
+  state.equipTransport('BICYCLE');
   assert.equal(state.getSnapshot().movementSpeed, 250);
 });
 
@@ -73,7 +73,7 @@ test('thermobag increases only successful delivery payment once, including while
   let now = 0;
   const state = new GameState();
   state.update({ money: 4700, xp: 250 });
-  state.purchaseItem('thermobag'); state.purchaseItem('bicycle');
+  state.purchaseItem('thermobag'); state.purchaseTransport('BICYCLE');
   assert.deepEqual(calculateDeliveryReward(200, state.getSnapshot()), { baseReward: 200, modifiers: [{ id: 'thermobag', name: 'Термосумка', amount: 20 }], total: 220 });
   const manager = new OrderManager({ state, restaurants, customers, now: () => now, random: () => 0 });
   manager.generate(); manager.accept();
@@ -98,7 +98,8 @@ test('thermobag increases only successful delivery payment once, including while
 test('versioned saves roundtrip progression, migrate old saves and reject malformed equipment', () => {
   const state = new GameState();
   state.update({ money: 8000, xp: 300 });
-  for (const id of ['old-shoes', 'good-shoes', 'thermobag', 'bicycle']) state.purchaseItem(id);
+  for (const id of ['old-shoes', 'good-shoes', 'thermobag']) state.purchaseItem(id);
+  state.purchaseTransport('BICYCLE');
   const restored = new GameState();
   restored.loadSaveData(JSON.parse(JSON.stringify(state.getSaveData())));
   assert.deepEqual(restored.getSaveData(), state.getSaveData());
@@ -107,7 +108,9 @@ test('versioned saves roundtrip progression, migrate old saves and reject malfor
   assert.equal(restored.getSnapshot().movementSpeed, 160);
   assert.deepEqual(restored.getSnapshot().ownedItems, []);
   restored.loadSaveData({ ownedItems: ['bicycle', 'bicycle', 'unknown', 'thermobag', null], equippedItems: { SHOES: 'bicycle', BAG: 'good-shoes', TRANSPORT: 'bicycle' }, movementSpeed: 9999 });
-  assert.deepEqual(restored.getSnapshot().ownedItems, ['bicycle', 'thermobag']);
+  assert.deepEqual(restored.getSnapshot().ownedItems, ['thermobag']);
+  assert.ok(restored.getSnapshot().ownedTransports.includes('BICYCLE'));
+  assert.equal('TRANSPORT' in restored.getSnapshot().equippedItems, false);
   assert.equal(restored.getSnapshot().equippedItems.SHOES, null);
   assert.equal(restored.getSnapshot().equippedItems.BAG, null);
   assert.equal(restored.getSnapshot().movementSpeed, 250);
@@ -129,7 +132,7 @@ test('representative economy reaches first shoes in two deliveries and full bicy
   let firstUpgrade;
   for (let delivery = 1; delivery <= 24 && path.length; delivery++) {
     state.addRewards({ reward: calculateDeliveryReward(average, state.getSnapshot()).total, xpReward: xp, reputationReward: 1 });
-    if (state.purchaseItem(path[0]).ok) {
+    if ((path[0] === 'bicycle' ? state.purchaseTransport('BICYCLE') : state.purchaseItem(path[0])).ok) {
       if (!firstUpgrade) firstUpgrade = delivery;
       path.shift();
     }

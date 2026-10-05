@@ -59,6 +59,7 @@ button:focus-visible { outline: 3px solid #87e4fa; outline-offset: 2px; }
 #event-buttons button { width: 100%; white-space: pre-line; line-height: 1.5; }
 .event-dialog .modal-header h2 { overflow-wrap: anywhere; }
 .hud-actions { flex-wrap: wrap; }
+.hud-actions button small { display: block; margin-top: 4px; font-size: 10px; font-weight: normal; }
 #garage-items { display: grid; gap: 12px; }
 #garage-feedback, #profile-feedback, #transport-goal, #garage-goal, #offer-details { white-space: pre-line; }
 #garage-feedback { color: #ffe6a9; }

@@ -5,33 +5,19 @@ import { reputationTier, DISTRICTS } from '../config/economyConfig.js';
 import { transportFor, careerTitle, nextTransportGoal } from '../config/transportConfig.js';
 
 export class PlayerProfileUI extends ModalUI {
-  constructor(scene, state, player, events) {
+  constructor(scene, state, player) {
     super(scene, player, 'profile-dialog', 'open-profile');
-    const historyButton = document.createElement('button'); historyButton.textContent = 'СОБЫТИЯ'; historyButton.id = 'show-events';
-    const history = document.createElement('div'); history.id = 'event-history'; history.hidden = true;
-    document.querySelector('#profile-dialog .modal-content').append(historyButton, history);
-    historyButton.onclick = () => {
-      history.hidden = !history.hidden; history.replaceChildren();
-      if (!events?.history.length) history.textContent = 'Пока без приключений. Подозрительно спокойно.';
-      for (const event of events?.history || []) { const row = document.createElement('p'); row.textContent = `${event.bad ? '−' : '+'} ${event.title}: ${event.text}`; history.append(row); }
-    };
-    scene.events.once('shutdown', () => { historyButton.remove(); history.remove(); });
-    this.walk = document.querySelector('#equip-walking');
-    this.bicycle = document.querySelector('#equip-bicycle');
-    const switchTransport = id => {
-      const result = state.equipTransport(id);
-      document.querySelector('#profile-feedback').textContent = result.ok ? `Транспорт: ${result.transport.name}` : result.reason;
-    };
-    this.walk.onclick = () => switchTransport('WALKING');
-    this.bicycle.onclick = () => switchTransport('BICYCLE');
     this.unsubscribe = state.subscribe(snapshot => {
       const next = nextTransportGoal(snapshot);
       const rows = [ ['Статус', careerTitle(snapshot)], ['Уровень', snapshot.level], ['Опыт', `${snapshot.xp} / ${xpForLevel(snapshot.level + 1)} XP`],
-        ['Репутация', `${snapshot.reputation} · ${reputationTier(snapshot.reputation).name}`], ['Деньги', `${snapshot.money} ₽`],
+        ['Репутация', snapshot.reputation], ['Ранг репутации', reputationTier(snapshot.reputation).name], ['Баланс', `${snapshot.money} ₽`],
         ['Район', DISTRICTS[snapshot.selectedDistrict].name], ['Бонус спроса', `${snapshot.demandBonusOrders} заказов`],
         ['Транспорт', transportFor(snapshot.equippedTransport).name],
         ['Обувь', itemById(snapshot.equippedItems.SHOES)?.name || 'Нет'],
         ['Сумка', itemById(snapshot.equippedItems.BAG)?.name || 'Нет'], ['Скорость', `${snapshot.movementSpeed} пикс./сек.`],
+        ['Выполнено заказов', snapshot.completedOrders], ['Провалено заказов', snapshot.failedOrders],
+        ['Заработано всего', `${snapshot.totalMoneyEarned} ₽`], ['Чаевые', `${snapshot.totalTipsEarned} ₽`],
+        ['Штрафы оплачены', `${snapshot.totalFinesPaid} ₽`], ['Доставлено', `${snapshot.totalDistanceDelivered} м`],
         ['Следующая цель', next ? `${next.name} — ${next.purchasePrice} ₽ · уровень ${next.requiredLevel}` : 'Весь транспорт куплен'] ];
       const details = document.querySelector('#profile-details');
       details.replaceChildren();
@@ -40,10 +26,7 @@ export class PlayerProfileUI extends ModalUI {
         const definition = document.createElement('dd'); definition.textContent = value;
         details.append(term, definition);
       }
-      this.walk.disabled = snapshot.transport === 'WALKING';
-      this.bicycle.hidden = !snapshot.ownedItems.includes('bicycle');
-      this.bicycle.disabled = snapshot.transport === 'BICYCLE';
     });
-    scene.events.once('shutdown', () => { this.unsubscribe(); this.walk.onclick = null; this.bicycle.onclick = null; });
+    scene.events.once('shutdown', () => this.unsubscribe());
   }
 }

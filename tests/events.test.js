@@ -55,7 +55,7 @@ test('district purchase requires both level and money, costs once, and roundtrip
   state.selectDistrict('center'); state.setDemand(3);
   const saved = state.getSaveData(), restored = new GameState(); restored.loadSaveData(saved);
   assert.deepEqual(restored.getSaveData(), saved);
-  assert.equal(saved.version, 4); assert.equal('active' in saved, false);
+  assert.equal(saved.version, 5); assert.equal('active' in saved, false);
   restored.loadSaveData({ version: 2, money: 20, reputation: 50 });
   assert.equal(restored.getSnapshot().selectedDistrict, 'residential'); assert.equal(restored.getSnapshot().demandBonusOrders, 0);
   restored.loadSaveData({ unlockedDistricts: ['nonsense', 'toString', '__proto__'], selectedDistrict: 'center', demandBonusOrders: Infinity });
@@ -92,7 +92,7 @@ test('negative streak, cooldown, no-repeat, bicycle and equipment requirements',
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'cola')), true);
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'puncture')), false);
   events.orders.order.status = 'DELIVERED'; // Vehicle changes now require finishing the active order.
-  state.update({ money: 3500 }); state.purchaseItem('bicycle');
+  state.update({ money: 3500 }); state.purchaseTransport('BICYCLE');
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'puncture')), true);
   events.lastId = 'green'; events.debug('POSITIVE'); assert.notEqual(events.active.event.id, 'green'); events.resolve(); events.finish();
   const food = EVENTS.find(e => e.id === 'soup'), green = EVENTS.find(e => e.id === 'green');

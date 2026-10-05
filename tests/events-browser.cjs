@@ -81,8 +81,10 @@ async function openScreen(page, selector) {
       await page.getByRole('button',{name:'ПОНЯТНО',exact:true}).click();
     }
     await page.evaluate(() => { testScene.orders.order=null; testScene.orders.generate(); });
-    await openScreen(page, '#open-profile'); await page.click('#show-events');
+    await openScreen(page, '#open-events');
     assert.equal(await page.locator('#event-history p').count(),5);
+    await page.click('#event-history-dialog [data-close]');
+    await openScreen(page, '#open-profile');
     assert.match(await page.locator('#profile-details').textContent(), /Новичок|Надёжный|Любимчик|Легенда/);
     const before = await snapshot(); await page.keyboard.press('F4'); assert.deepEqual(await snapshot(), before);
     await page.click('#profile-dialog [data-close]');

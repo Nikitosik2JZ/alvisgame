@@ -25,9 +25,10 @@
       </div>
       <div id="xp" class="xp">0 / 100 XP</div>
       <nav class="hud-actions" aria-label="Прогресс курьера">
-        <button id="open-shop">МАГАЗИН</button>
-        <button id="open-profile">КУРЬЕР</button>
-        <button id="open-garage">ГАРАЖ</button>
+        <button id="open-shop">МАГАЗИН<small>Экипировка</small></button>
+        <button id="open-profile">КУРЬЕР<small>Статистика</small></button>
+        <button id="open-garage">ГАРАЖ<small>Транспорт</small></button>
+        <button id="open-events">СОБЫТИЯ<small>История</small></button>
       </nav>
       <div id="current-transport" class="xp"></div>
       <div id="transport-goal" class="progression-goal"></div>
@@ -59,7 +60,7 @@
       <div class="modal-header"><h2 id="shop-title">МАГАЗИН</h2><button data-close aria-label="Закрыть магазин">ЗАКРЫТЬ ×</button></div>
       <div class="modal-content">
         <p id="shop-money"></p>
-        <p id="shop-goal" class="goal-card"></p>
+        <p class="modal-note">Обувь и сумки. Покупка и выбор транспорта — в ГАРАЖЕ.</p>
         <p class="modal-note">Движение остановлено. Таймер заказа продолжает идти.</p>
         <p id="shop-feedback" role="status" aria-live="polite"></p>
         <div id="shop-items"></div>
@@ -69,11 +70,13 @@
       <div class="modal-header"><h2 id="profile-title">КУРЬЕР</h2><button data-close aria-label="Закрыть профиль">ЗАКРЫТЬ ×</button></div>
       <div class="modal-content">
         <dl id="profile-details"></dl>
-        <div class="transport-actions"><button id="equip-walking">ПЕШКОМ</button><button id="equip-bicycle" hidden>ВЕЛОСИПЕД</button></div>
-        <p class="modal-note">Все машины и смена транспорта — в ГАРАЖЕ.</p>
-        <p id="profile-feedback" role="status"></p>
+        <p class="modal-note">Экипировка — в МАГАЗИНЕ. Покупка и выбор транспорта — в ГАРАЖЕ.</p>
         <p class="modal-note">Движение остановлено. Таймер заказа продолжает идти.</p>
       </div>
+    </dialog>
+    <dialog id="event-history-dialog" class="progression-dialog" aria-labelledby="event-history-title">
+      <div class="modal-header"><h2 id="event-history-title">СОБЫТИЯ</h2><button data-close aria-label="Закрыть историю событий">ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content"><p class="modal-note">История приключений текущей сессии.</p><div id="event-history"></div></div>
     </dialog>
     <dialog id="garage-dialog" class="progression-dialog" aria-labelledby="garage-title">
       <div class="modal-header"><h2 id="garage-title">ГАРАЖ</h2><button data-close aria-label="Закрыть гараж">ЗАКРЫТЬ ×</button></div>

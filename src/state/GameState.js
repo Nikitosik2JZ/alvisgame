@@ -1,13 +1,16 @@
 import { BALANCE, levelForXP } from '../config/gameBalance.js';
-import { CATEGORIES, TRANSPORT, itemById } from '../data/shopItems.js';
+import { CATEGORIES, itemById } from '../data/shopItems.js';
 import { DISTRICTS } from '../config/economyConfig.js';
 import { EVENT_BALANCE } from '../config/eventBalance.js';
-import { transportById, transportFor, TRANSPORTS } from '../config/transportConfig.js';
+import { TRANSPORT, transportById, transportFor, TRANSPORTS } from '../config/transportConfig.js';
+
+const STAT_KEYS = ['completedOrders', 'failedOrders', 'totalMoneyEarned', 'totalTipsEarned', 'totalFinesPaid', 'totalDistanceDelivered'];
 
 const initialState = () => ({ money: 0, level: 1, xp: 0, reputation: 0, movementSpeed: BALANCE.walkingBaseSpeed,
   unlockedDistricts: ['residential'], selectedDistrict: 'residential', demandBonusOrders: 0,
   transport: TRANSPORT.WALKING, equippedTransport: TRANSPORT.WALKING, ownedTransports: [TRANSPORT.WALKING], transportMilestones: [],
-  largeOrderBoost: 0, ownedItems: [], equippedItems: { SHOES: null, BAG: null, TRANSPORT: null } });
+  largeOrderBoost: 0, ownedItems: [], equippedItems: { SHOES: null, BAG: null },
+  ...Object.fromEntries(STAT_KEYS.map(key => [key, 0])) });
 
 // One owner for progression. Derived stats are recalculated, never trusted from saves.
 export class GameState {
@@ -22,8 +25,6 @@ export class GameState {
     this.values.level = levelForXP(this.values.xp);
     this.values.transport = this.values.equippedTransport;
     const transport = transportFor(this.values.transport);
-    // Keep the existing equipment/transport API compatible; vehicles have their own ownership domain.
-    this.values.equippedItems.TRANSPORT = transport.id === TRANSPORT.BICYCLE ? 'bicycle' : null;
     const shoes = itemById(this.values.equippedItems.SHOES);
     this.values.movementSpeed = Math.round(transport.movementSpeed * (transport.id === TRANSPORT.WALKING ? 1 + (shoes?.walkingBonus || 0) : 1));
     for (const listener of this.listeners) listener(this.getSnapshot());
@@ -38,12 +39,29 @@ export class GameState {
     this.refresh();
   }
 
-  addRewards({ reward, xpReward, reputationReward }) {
+  addRewards({ reward, xpReward, reputationReward, distance = 0 }) {
+    this.values.completedOrders++;
+    this.values.totalMoneyEarned += reward;
+    this.values.totalDistanceDelivered += Math.max(0, Math.round(distance));
     this.update({ money: this.values.money + reward, xp: this.values.xp + xpReward, reputation: this.values.reputation + reputationReward });
   }
 
+  failOrder(penalty) {
+    this.values.failedOrders++;
+    this.update({ reputation: this.values.reputation - penalty });
+  }
+
+  applyEventMoney(delta, tips = false) {
+    const actual = delta < 0 ? -Math.min(this.values.money, -delta) : delta;
+    if (actual > 0) {
+      this.values.totalMoneyEarned += actual;
+      if (tips) this.values.totalTipsEarned += actual;
+    } else this.values.totalFinesPaid -= actual;
+    this.update({ money: this.values.money + actual });
+    return Math.abs(actual);
+  }
+
   purchaseItem(id) {
-    if (id === 'bicycle') return this.purchaseTransport(TRANSPORT.BICYCLE);
     const item = itemById(id);
     if (!item) return { ok: false, reason: 'Предмет не найден' };
     if (this.values.ownedItems.includes(id)) return { ok: false, reason: 'Уже куплено' };
@@ -58,7 +76,6 @@ export class GameState {
   }
 
   equipItem(id) {
-    if (id === 'bicycle') return this.equipTransport(TRANSPORT.BICYCLE);
     const item = itemById(id);
     if (!item || !this.values.ownedItems.includes(id)) return { ok: false, reason: 'Предмет не куплен' };
     this.values.equippedItems[item.category] = id;
@@ -67,7 +84,6 @@ export class GameState {
   }
 
   unequipCategory(category) {
-    if (category === 'TRANSPORT') return this.equipTransport(TRANSPORT.WALKING).ok;
     if (!CATEGORIES.includes(category)) return false;
     this.values.equippedItems[category] = null;
     this.refresh();
@@ -89,10 +105,9 @@ export class GameState {
     if (this.values.money < transport.purchasePrice) return { ok: false, reason: 'Не хватает денег · ещё ' + (transport.purchasePrice - this.values.money) + ' ₽' };
     this.values.money -= transport.purchasePrice;
     this.values.ownedTransports.push(id);
-    if (id === TRANSPORT.BICYCLE && !this.values.ownedItems.includes('bicycle')) this.values.ownedItems.push('bicycle');
     this.values.equippedTransport = id;
     this.refresh();
-    return { ok: true, transport, item: id === TRANSPORT.BICYCLE ? itemById('bicycle') : null };
+    return { ok: true, transport };
   }
 
   equipTransport(id) {
@@ -101,7 +116,7 @@ export class GameState {
     if (blocked) return { ok: false, reason: blocked };
     this.values.equippedTransport = id;
     this.refresh();
-    return { ok: true, transport: transportById(id), item: id === TRANSPORT.BICYCLE ? itemById('bicycle') : null };
+    return { ok: true, transport: transportById(id) };
   }
 
   setLargeOrderBoost(value) { this.values.largeOrderBoost = Math.max(0, Math.min(EVENT_BALANCE.largeOrderBoost, value)); this.refresh(); }
@@ -122,7 +137,7 @@ export class GameState {
     this.values.selectedDistrict = id; this.refresh(); return true;
   }
 
-  getSaveData() { return { version: 4, ...this.getSnapshot() }; }
+  getSaveData() { return { version: 5, ...this.getSnapshot() }; }
 
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
@@ -137,13 +152,13 @@ export class GameState {
       if (this.values.ownedItems.includes(id) && itemById(id)?.category === category) this.values.equippedItems[category] = id;
     }
     if (Array.isArray(data.ownedTransports)) this.values.ownedTransports = [...new Set([TRANSPORT.WALKING, ...data.ownedTransports.filter(id => transportById(id))])];
-    const legacyBicycle = this.values.ownedItems.includes('bicycle') || data.transport === TRANSPORT.BICYCLE || data.equippedItems?.TRANSPORT === 'bicycle';
+    const legacyBicycle = (Array.isArray(data.ownedItems) && data.ownedItems.includes('bicycle')) || data.transport === TRANSPORT.BICYCLE || data.equippedItems?.TRANSPORT === 'bicycle';
     if (legacyBicycle && !this.values.ownedTransports.includes(TRANSPORT.BICYCLE)) this.values.ownedTransports.push(TRANSPORT.BICYCLE);
-    if (this.values.ownedTransports.includes(TRANSPORT.BICYCLE) && !this.values.ownedItems.includes('bicycle')) this.values.ownedItems.push('bicycle');
-    const equipped = data.equippedTransport ?? (data.equippedItems ? (data.equippedItems.TRANSPORT === 'bicycle' ? TRANSPORT.BICYCLE : TRANSPORT.WALKING) : data.transport);
+    const equipped = data.equippedTransport ?? (data.equippedItems?.TRANSPORT === 'bicycle' ? TRANSPORT.BICYCLE : data.transport);
     if (this.values.ownedTransports.includes(equipped)) this.values.equippedTransport = equipped;
     if (Array.isArray(data.transportMilestones)) this.values.transportMilestones = [...new Set(data.transportMilestones.filter(id => TRANSPORTS.some(t => t.id === id && t.milestoneTitle)))];
     if (Number.isFinite(data.largeOrderBoost)) this.values.largeOrderBoost = Math.max(0, Math.min(EVENT_BALANCE.largeOrderBoost, data.largeOrderBoost));
+    for (const key of STAT_KEYS) if (Number.isFinite(data[key])) this.values[key] = Math.max(0, Math.floor(data[key]));
     this.update(data);
     return true;
   }

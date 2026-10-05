@@ -5,6 +5,14 @@ async function openScreen(page, selector) {
   await page.click(selector);
 }
 
+async function buyBicycle(page) {
+  await page.click('#shop-dialog [data-close]');
+  await openScreen(page, '#open-garage');
+  await page.click('[data-transport="BICYCLE"]');
+  await page.click('#garage-dialog [data-close]');
+  await openScreen(page, '#open-shop');
+}
+
 
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
@@ -28,8 +36,8 @@ async function openScreen(page, selector) {
     assert.match(await page.locator('#shop-feedback').textContent(), /Не хватает/);
     await page.click('[data-item="good-shoes"]');
     assert.match(await page.locator('#shop-feedback').textContent(), /Сначала/);
-    await page.click('[data-item="bicycle"]');
-    assert.match(await page.locator('#shop-feedback').textContent(), /уровень 3/);
+    await buyBicycle(page);
+    assert.match(await page.locator('#garage-feedback').textContent(), /уровень 3/);
     const start = await pos();
     await page.keyboard.down('d'); await page.waitForTimeout(250); await page.keyboard.up('d');
     assert.deepEqual(await pos(), start, 'modal blocks movement');
@@ -48,10 +56,10 @@ async function openScreen(page, selector) {
     await page.click('[data-item="thermobag"]');
     assert.equal((await snapshot()).money, 600);
     for (let i = 0; i < 3; i++) await page.keyboard.press('F3');
-    await page.click('[data-item="bicycle"]');
-    assert.match(await page.locator('#shop-feedback').textContent(), /Не хватает/);
+    await buyBicycle(page);
+    assert.match(await page.locator('#garage-feedback').textContent(), /Не хватает/);
     for (let i = 0; i < 3; i++) await page.keyboard.press('F2');
-    await page.click('[data-item="bicycle"]');
+    await buyBicycle(page);
     assert.equal((await snapshot()).money, 100);
     assert.equal((await snapshot()).transport, 'BICYCLE');
     assert.equal((await snapshot()).movementSpeed, 250);
@@ -61,10 +69,13 @@ async function openScreen(page, selector) {
     await openScreen(page, '#open-profile');
     assert.match(await page.locator('#profile-details').textContent(), /ВЕЛОСИПЕД/i);
     assert.match(await page.locator('#profile-details').textContent(), /250 пикс/);
-    await page.click('#equip-walking');
+    assert.equal(await page.locator('#profile-dialog button').count(), 1);
+    await page.click('#profile-dialog [data-close]');
+    await openScreen(page, '#open-garage');
+    await page.click('[data-transport="WALKING"]');
     assert.equal((await snapshot()).movementSpeed, 176);
     assert.equal(await page.evaluate(() => testScene.player.texture.key), 'courier');
-    await page.click('#equip-bicycle');
+    await page.click('[data-transport="BICYCLE"]');
     await page.keyboard.press('Escape');
     // Same building collision and camera remain in effect on the bicycle.
     await page.evaluate(() => testScene.player.setPosition(530, 600));
@@ -112,7 +123,7 @@ async function openScreen(page, selector) {
         for (const box of [bounds, close]) assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height, JSON.stringify({ viewport, box }));
         assert.equal(await page.locator(dialog).evaluate(el => el.scrollWidth <= el.clientWidth), true, 'no horizontal overflow');
         if (dialog === '#shop-dialog') {
-          await page.locator('[data-item="bicycle"]').scrollIntoViewIfNeeded();
+          await page.locator('[data-item="thermobag"]').scrollIntoViewIfNeeded();
           assert.equal(await page.locator(dialog + ' [data-close]').isVisible(), true);
           await page.locator(dialog + ' .modal-content').evaluate(el => { el.scrollTop = 0; });
         }

@@ -67,7 +67,7 @@ const artifacts = process.env.ARTIFACT_DIR || path.join(require('node:os').tmpdi
       await page.evaluate(()=>{const t=s.orders.getTarget();s.player.setPosition(t.x,t.y);});
       await page.waitForSelector('#interact',{state:'visible'}); await bounds('#interact');
       await page.tap('#interact'); assert.equal(await page.evaluate(()=>s.orders.order.status),'PICKED_UP');
-      for (const [opener,dialog] of [['open-shop','shop-dialog'],['open-profile','profile-dialog'],['open-garage','garage-dialog'],['open-districts','district-dialog']]) {
+      for (const [opener,dialog] of [['open-shop','shop-dialog'],['open-profile','profile-dialog'],['open-garage','garage-dialog'],['open-events','event-history-dialog'],['open-districts','district-dialog']]) {
         await page.tap('#open-menu');
         assert.equal(await page.evaluate(()=>s.player.inputBlocked),true);
         await page.tap(`#${opener}`); await page.waitForSelector(`#${dialog}[open]`);
