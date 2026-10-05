@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameState } from '../state/GameState.js';
+import { MovementInput } from '../input/MovementInput.js';
 import { transportFor } from '../config/transportConfig.js';
 
 export class Courier extends Phaser.Physics.Arcade.Sprite {
@@ -17,24 +18,9 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
       this.body.setSize(visual.bodyWidth, visual.bodyHeight).setOffset((visual.width - visual.bodyWidth) / 2, (visual.height - visual.bodyHeight) / 2);
     });
     this.direction = new Phaser.Math.Vector2();
-    this.keys = scene.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT');
-    this.touch = new Set();
-    this.buttons = [...document.querySelectorAll('[data-direction]')];
-    this.handlers = [];
-    for (const button of this.buttons) {
-      const down = (event) => {
-        event.preventDefault();
-        if (this.inputBlocked) return;
-        button.setPointerCapture(event.pointerId);
-        this.touch.add(button.dataset.direction);
-      };
-      const up = () => this.touch.delete(button.dataset.direction);
-      button.addEventListener('pointerdown', down);
-      for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(name, up);
-      this.handlers.push({ button, down, up });
-    }
+    this.movementInput = new MovementInput(scene, () => this.inputBlocked);
     this.clearInput = () => {
-      this.touch.clear();
+      this.movementInput.reset();
       scene.input.keyboard.resetKeys();
       if (this.body) this.setVelocity(0, 0);
     };
@@ -46,14 +32,9 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
 
   update() {
     if (this.inputBlocked) { this.setVelocity(0, 0); return; }
-    const keys = this.keys;
-    const left = keys.A.isDown || keys.LEFT.isDown || this.touch.has('left');
-    const right = keys.D.isDown || keys.RIGHT.isDown || this.touch.has('right');
-    const up = keys.W.isDown || keys.UP.isDown || this.touch.has('up');
-    const down = keys.S.isDown || keys.DOWN.isDown || this.touch.has('down');
-    this.direction.set(Number(right) - Number(left), Number(down) - Number(up)).normalize();
-    // Arcade Physics integrates pixels/second using its time step. Normalizing
-    // gives diagonal movement the same speed as horizontal/vertical movement.
+    const vector = this.movementInput.getVector();
+    this.direction.set(vector.x, vector.y);
+    // Input magnitude is capped at one; progression and effects still own speed.
     this.setVelocity(this.direction.x * this.speed * (this.speedMultiplier || 1), this.direction.y * this.speed * (this.speedMultiplier || 1));
     if (this.direction.lengthSq() > 0) this.setRotation(this.direction.angle() + Math.PI / 2);
   }
@@ -62,10 +43,6 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
     this.unsubscribeState();
     window.removeEventListener('blur', this.clearInput);
     document.removeEventListener('visibilitychange', this.visibilityHandler);
-    for (const { button, down, up } of this.handlers) {
-      button.removeEventListener('pointerdown', down);
-      for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) button.removeEventListener(name, up);
-    }
-    this.touch.clear();
+    this.movementInput.destroy();
   }
 }

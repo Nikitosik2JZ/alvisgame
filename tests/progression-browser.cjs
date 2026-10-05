@@ -1,5 +1,10 @@
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
 const assert = require('node:assert/strict');
+async function openScreen(page, selector) {
+  if (!await page.locator(selector).isVisible()) await page.click('#open-menu');
+  await page.click(selector);
+}
+
 
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
@@ -18,7 +23,7 @@ const assert = require('node:assert/strict');
     await page.waitForTimeout(500);
     const snapshot = () => page.evaluate(() => testScene.orders.state.getSnapshot());
     const pos = () => page.evaluate(() => ({ x: testScene.player.x, y: testScene.player.y }));
-    await page.click('#open-shop');
+    await openScreen(page, '#open-shop');
     await page.click('[data-item="old-shoes"]');
     assert.match(await page.locator('#shop-feedback').textContent(), /Не хватает/);
     await page.click('[data-item="good-shoes"]');
@@ -53,8 +58,8 @@ const assert = require('node:assert/strict');
     assert.equal(await page.evaluate(() => testScene.player.texture.key), 'courier-bicycle');
     assert.match(await page.locator('#money').textContent(), /100 ₽/);
     await page.click('#shop-dialog [data-close]');
-    await page.click('#open-profile');
-    assert.match(await page.locator('#profile-details').textContent(), /Велосипед/);
+    await openScreen(page, '#open-profile');
+    assert.match(await page.locator('#profile-details').textContent(), /ВЕЛОСИПЕД/i);
     assert.match(await page.locator('#profile-details').textContent(), /250 пикс/);
     await page.click('#equip-walking');
     assert.equal((await snapshot()).movementSpeed, 176);
@@ -66,9 +71,10 @@ const assert = require('node:assert/strict');
     await page.keyboard.down('d'); await page.waitForTimeout(700); await page.keyboard.up('d');
     assert.ok((await pos()).x <= 554.5, 'bicycle collision');
     await page.evaluate(() => testScene.player.setPosition(1200, 1000));
+    await page.evaluate(()=>{testScene.orders.order=null;testScene.orders.random=()=>0;testScene.orders.generate();});
     await page.click('#accept-order');
     const timer = await page.locator('#timer').textContent();
-    await page.click('#open-shop'); await page.waitForTimeout(1100);
+    await openScreen(page, '#open-shop'); await page.waitForTimeout(1100);
     assert.notEqual(await page.locator('#timer').textContent(), timer, 'order timer continues in modal');
     await page.keyboard.press('e');
     assert.equal(await page.evaluate(() => testScene.orders.order.status), 'ACCEPTED');
@@ -80,7 +86,7 @@ const assert = require('node:assert/strict');
         const key = current < goal ? positive : negative;
         await page.keyboard.down(key);
         try { await page.waitForFunction(({ axis, goal, positive }) => positive ? testScene.player[axis] >= goal - 5 : testScene.player[axis] <= goal + 5, { axis, goal, positive: current < goal }, { timeout: 15000 }); }
-        catch (error) { console.log(await page.evaluate(() => ({ x: testScene.player.x, y: testScene.player.y, speed: testScene.player.speed, blocked: testScene.player.inputBlocked, enabled: testScene.input.keyboard.enabled, keys: Object.fromEntries(Object.entries(testScene.player.keys).map(([k,v]) => [k,v.isDown])), velocity: testScene.player.body.velocity, order: testScene.orders.order }))); throw error; }
+        catch (error) { console.log(await page.evaluate(() => ({ x: testScene.player.x, y: testScene.player.y, speed: testScene.player.speed, blocked: testScene.player.inputBlocked, enabled: testScene.input.keyboard.enabled, keys: Object.fromEntries(Object.entries(testScene.player.movementInput.keys).map(([k,v]) => [k,v.isDown])), velocity: testScene.player.body.velocity, order: testScene.orders.order }))); throw error; }
         finally { await page.keyboard.up(key); }
       }
     }
@@ -100,7 +106,7 @@ const assert = require('node:assert/strict');
     for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 320, height: 568 }]) {
       await page.setViewportSize(viewport); await page.waitForTimeout(200);
       for (const [open, dialog] of [['#open-shop', '#shop-dialog'], ['#open-profile', '#profile-dialog']]) {
-        await page.click(open);
+        await openScreen(page, open);
         const bounds = await page.locator(dialog).boundingBox();
         const close = await page.locator(dialog + ' [data-close]').boundingBox();
         for (const box of [bounds, close]) assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height, JSON.stringify({ viewport, box }));
@@ -116,8 +122,8 @@ const assert = require('node:assert/strict');
       if (viewport.width < 900) {
         await page.evaluate(() => testScene.player.setPosition(1200, 1000));
         const before = await pos();
-        const button = await page.locator('[data-direction="right"]').boundingBox();
-        await page.mouse.move(button.x + button.width / 2, button.y + button.height / 2);
+        const button = await page.locator('#joystick').boundingBox();
+        await page.mouse.move(button.x + button.width - 8, button.y + button.height / 2);
         await page.mouse.down(); await page.waitForTimeout(250); await page.mouse.up();
         assert.ok((await pos()).x > before.x + 20, 'touch works after modal closes');
       }
@@ -134,7 +140,7 @@ const assert = require('node:assert/strict');
       await page.waitForTimeout(200);
       assert.equal(await page.locator('.stats').textContent(), before);
       assert.equal(await page.locator('#xp').textContent(), xp);
-      await page.click('#open-shop');
+      await openScreen(page, '#open-shop');
       assert.match(await page.locator('#shop-money').textContent(), /0 ₽/);
     }
     assert.deepEqual(errors, [], 'browser errors');

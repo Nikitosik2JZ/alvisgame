@@ -3,7 +3,7 @@ import './style.css';
 import { BootScene } from './scenes/BootScene.js';
 import { GameScene } from './scenes/GameScene.js';
 
-// Keep the existing stacked mobile HUD below its actual content height.
+// Compact objectives follow the actual HUD height, including safe areas.
 const hud = document.querySelector('.hud');
 new ResizeObserver(() => document.documentElement.style.setProperty('--hud-bottom', `${hud.getBoundingClientRect().bottom + 12}px`)).observe(hud);
 

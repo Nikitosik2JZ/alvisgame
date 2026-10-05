@@ -10,12 +10,18 @@
   <body>
     <main id="game" aria-label="Courier Empire city"></main>
     <header class="hud">
+      <div class="hud-switches">
+        <button id="toggle-hud" aria-expanded="true" aria-controls="hud-details" aria-label="Свернуть HUD">▲</button>
+        <button id="open-menu" aria-label="Открыть меню">☰</button>
+      </div>
+      <div id="hud-details">
       <div class="eyebrow">КУРЬЕРСКАЯ ИМПЕРИЯ</div>
       <h1>Courier Empire<span class="local-badge">LOCAL</span></h1>
+      </div>
       <div class="stats">
-        <span>Деньги: <strong id="money">0 ₽</strong></span>
-        <span>Уровень: <strong id="level">1</strong></span>
-        <span>Репутация: <strong id="reputation">0</strong></span>
+        <span><span class="stat-label">Деньги:</span> <strong id="money">0 ₽</strong></span>
+        <span><span class="stat-label">Ур.</span> <strong id="level">1</strong></span>
+        <span><span class="stat-label">Реп.</span> <strong id="reputation">0</strong></span>
       </div>
       <div id="xp" class="xp">0 / 100 XP</div>
       <nav class="hud-actions" aria-label="Прогресс курьера">
@@ -27,25 +33,28 @@
       <div id="transport-goal" class="progression-goal"></div>
     </header>
     <section id="order-panel" class="order-panel" aria-label="Текущий заказ">
+      <button id="toggle-order" aria-expanded="false" aria-controls="active-order-details" hidden>ДЕТАЛИ ▼</button>
       <strong id="objective" aria-live="polite"></strong>
       <div id="order-offer">
         <p id="offer-restaurant"></p>
+        <strong id="offer-reward"></strong>
+        <p id="offer-summary"></p>
         <p id="offer-details"></p>
         <button id="accept-order">ПРИНЯТЬ</button>
       </div>
       <div id="distance" hidden></div>
       <div id="timer" hidden></div>
+      <div id="active-order-details" hidden></div>
       <p id="result" role="status" hidden></p>
     </section>
     <button id="interact" class="interact" hidden>ЗАБРАТЬ ЗАКАЗ · E</button>
     <aside class="guide"><span class="status-dot"></span> Следуйте к маркеру заказа</aside>
     <footer class="controls-hint"><kbd>W A S D</kbd><kbd>↑ ← ↓ →</kbd><span>Движение · E — действие</span></footer>
-    <nav class="touch-controls" aria-label="Movement controls">
-      <button data-direction="up" aria-label="Walk up">↑</button>
-      <button data-direction="left" aria-label="Walk left">←</button>
-      <button data-direction="down" aria-label="Walk down">↓</button>
-      <button data-direction="right" aria-label="Walk right">→</button>
-    </nav>
+    <div id="joystick" class="touch-controls" role="group" aria-label="Джойстик движения"><span class="joystick-stick"></span></div>
+    <dialog id="menu-dialog" class="progression-dialog menu-dialog" aria-labelledby="menu-title">
+      <div class="modal-header"><h2 id="menu-title">МЕНЮ</h2><button data-close>ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content" id="menu-actions"></div>
+    </dialog>
     <dialog id="shop-dialog" class="progression-dialog" aria-labelledby="shop-title">
       <div class="modal-header"><h2 id="shop-title">МАГАЗИН</h2><button data-close aria-label="Закрыть магазин">ЗАКРЫТЬ ×</button></div>
       <div class="modal-content">

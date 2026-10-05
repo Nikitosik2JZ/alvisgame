@@ -2,6 +2,7 @@
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
 const assert = require('node:assert/strict');
 
+
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   try {
@@ -90,8 +91,8 @@ const assert = require('node:assert/strict');
       const boxes = await page.evaluate(() => ['.hud', '#order-panel', '.touch-controls'].map(selector => { const r = document.querySelector(selector).getBoundingClientRect(); return { x:r.x,y:r.y,right:r.right,bottom:r.bottom }; }));
       for (const box of boxes) assert.ok(box.x >= 0 && box.y >= 0 && box.right <= viewport.width && box.bottom <= viewport.height, JSON.stringify({viewport,box}));
       const pos = await inspect();
-      const button = await page.locator('[data-direction="left"]').boundingBox();
-      await page.mouse.move(button.x + button.width / 2, button.y + button.height / 2);
+      const button = await page.locator('#joystick').boundingBox();
+      await page.mouse.move(button.x + 8, button.y + button.height / 2);
       await page.mouse.down();
       await page.waitForTimeout(150);
       await page.mouse.up();

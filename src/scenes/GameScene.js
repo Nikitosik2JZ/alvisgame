@@ -14,6 +14,7 @@ import { EventManager } from '../managers/EventManager.js';
 import { EventUI } from '../ui/EventUI.js';
 import { DistrictUI } from '../ui/DistrictUI.js';
 import { GarageUI } from '../ui/GarageUI.js';
+import { HUDUI } from '../ui/HUDUI.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -24,6 +25,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WORLD.width, WORLD.height);
     this.buildings = createCity(this);
     this.player = new Courier(this, WORLD.spawn.x, WORLD.spawn.y);
+    this.hudUI = new HUDUI(this, this.player);
     this.physics.add.collider(this.player, this.buildings);
     this.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
     this.cameras.main.startFollow(this.player, true);

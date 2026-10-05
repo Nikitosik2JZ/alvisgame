@@ -1,5 +1,10 @@
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
 const assert = require('node:assert/strict');
+async function openScreen(page, selector) {
+  if (!await page.locator(selector).isVisible()) await page.click('#open-menu');
+  await page.click(selector);
+}
+
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   try {
@@ -11,7 +16,7 @@ const assert = require('node:assert/strict');
     });
     const snapshot = () => page.evaluate(() => testScene.orders.state.getSnapshot());
     await page.keyboard.press('F7'); assert.equal((await snapshot()).level, 4);
-    await page.click('#open-districts'); await page.getByRole('button', { name: 'ОТКРЫТЬ ЗА 3000 ₽' }).click();
+    await openScreen(page, '#open-districts'); await page.getByRole('button', { name: 'ОТКРЫТЬ ЗА 3000 ₽' }).click();
     assert.equal((await snapshot()).money, 0);
     await page.getByRole('button', { name: 'ВЫБРАТЬ', exact: true }).click();
     await page.waitForFunction(() => testScene.orders.order.district === 'center');
@@ -24,13 +29,14 @@ const assert = require('node:assert/strict');
       await platformService.save(saved); const restored = new GameState(); restored.loadSaveData(await platformService.loadSave());
       return JSON.stringify(saved) === JSON.stringify(restored.getSaveData());
     }), true);
-    await page.click('#open-districts'); await page.getByRole('button', { name: 'ВЫБРАТЬ', exact: true }).click();
+    await openScreen(page, '#open-districts'); await page.getByRole('button', { name: 'ВЫБРАТЬ', exact: true }).click();
     await page.waitForFunction(() => testScene.orders.order.district === 'residential');
     await page.evaluate(() => { testScene.deliveryEvents.random = () => .99; });
+    await page.evaluate(()=>{testScene.orders.state.update({money:3500});testScene.orders.state.purchaseTransport('BICYCLE');});
     for (const type of ['STANDARD', 'URGENT', 'FRAGILE', 'DOUBLE']) {
       await page.evaluate(type => {
         const manager = testScene.orders; manager.order = null;
-        let calls = 0; const roll = { STANDARD: 0, URGENT: .7, FRAGILE: .9, DOUBLE: .99 }[type];
+        let calls = 0; const roll = { STANDARD: 0, URGENT: .7, FRAGILE: .84, DOUBLE: .99 }[type];
         manager.random = () => ++calls === 3 ? roll : 0; manager.generate();
       }, type);
       await page.click('#accept-order');
@@ -75,7 +81,7 @@ const assert = require('node:assert/strict');
       await page.getByRole('button',{name:'ПОНЯТНО',exact:true}).click();
     }
     await page.evaluate(() => { testScene.orders.order=null; testScene.orders.generate(); });
-    await page.click('#open-profile'); await page.click('#show-events');
+    await openScreen(page, '#open-profile'); await page.click('#show-events');
     assert.equal(await page.locator('#event-history p').count(),5);
     assert.match(await page.locator('#profile-details').textContent(), /Новичок|Надёжный|Любимчик|Легенда/);
     const before = await snapshot(); await page.keyboard.press('F4'); assert.deepEqual(await snapshot(), before);
@@ -91,12 +97,12 @@ const assert = require('node:assert/strict');
       const box = await page.locator('#event-dialog').boundingBox(); assert.ok(box.x>=0 && box.y>=0 && box.x+box.width<=viewport.width);
       await page.locator('#event-buttons button').first().click(); await page.getByRole('button',{name:'ПОНЯТНО',exact:true}).click();
       const start=await page.evaluate(() => { testScene.player.setPosition(1200,1000); return {x:1200,y:1000}; });
-      const right=await page.locator('[data-direction="right"]').boundingBox();
-      await page.mouse.move(right.x+20,right.y+20); await page.mouse.down(); await page.waitForTimeout(200); await page.mouse.up();
+      const right=await page.locator('#joystick').boundingBox();
+      await page.mouse.move(right.x+right.width-8,right.y+right.height/2); await page.mouse.down(); await page.waitForTimeout(200); await page.mouse.up();
       assert.ok(await page.evaluate(x=>testScene.player.x>x,start.x));
       await page.screenshot({path:`tests/stage4-${viewport.width}x${viewport.height}.png`});
       await page.evaluate(() => {testScene.orders.order=null;testScene.orders.generate();});
-      await page.click('#open-districts'); assert.equal(await page.getByRole('button',{name:'ВЫБРАТЬ',exact:true}).isEnabled(),true);
+      await openScreen(page, '#open-districts'); assert.equal(await page.getByRole('button',{name:'ВЫБРАТЬ',exact:true}).isEnabled(),true);
       await page.click('#district-dialog [data-close]');
     }
     assert.deepEqual(errors,[]);

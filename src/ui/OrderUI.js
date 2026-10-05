@@ -15,6 +15,16 @@ export class OrderUI {
     this.result = document.querySelector('#result');
     this.interaction = document.querySelector('#interact');
     this.acceptButton = document.querySelector('#accept-order');
+    this.toggle = document.querySelector('#toggle-order');
+    this.details = document.querySelector('#active-order-details');
+    this.expanded = false;
+    this.toggleDetails = () => {
+      this.expanded = !this.expanded;
+      this.details.hidden = !this.expanded;
+      this.toggle.textContent = this.expanded ? 'СКРЫТЬ ▲' : 'ДЕТАЛИ ▼';
+      this.toggle.setAttribute('aria-expanded', String(this.expanded));
+    };
+    this.toggle.addEventListener('click', this.toggleDetails);
     this.accept = () => { if (!player.inputBlocked) manager.accept(); };
     this.interact = () => { if (!player.inputBlocked) manager.interact(player); };
     this.acceptButton.addEventListener('click', this.accept);
@@ -35,6 +45,12 @@ export class OrderUI {
     const available = order.status === ORDER_STATUS.AVAILABLE;
     const typeLabel = ORDER_TYPES[order.type]?.name || 'ОБЫЧНЫЙ';
     const progress = order.type === 'DOUBLE' ? ` · ${order.deliveredCount} / 2 доставлено` : '';
+    this.panel.dataset.mode = available ? 'offer' : managerIsActive(order) ? 'active' : 'result';
+    this.toggle.hidden = !managerIsActive(order);
+    if (this.orderId !== order.id) { this.expanded = !document.documentElement.classList.contains('compact'); this.orderId = order.id; }
+    this.details.hidden = !this.expanded || !managerIsActive(order);
+    this.toggle.textContent = this.expanded ? 'СКРЫТЬ ▲' : 'ДЕТАЛИ ▼';
+    this.toggle.setAttribute('aria-expanded', String(this.expanded));
     this.offer.hidden = !available;
     this.result.hidden = true;
     this.interaction.hidden = true;
@@ -43,10 +59,13 @@ export class OrderUI {
     if (available) {
       this.objective.textContent = `НОВЫЙ ЗАКАЗ · ${typeLabel}`;
       document.querySelector('#offer-restaurant').textContent = order.restaurant.name;
+      document.querySelector('#offer-reward').textContent = `${order.reward} ₽`;
+      document.querySelector('#offer-summary').textContent = `${order.distance} м · ${order.deliveryTime} сек.${order.requiredTransport ? ` · Требуется: ${transportFor(order.requiredTransport).name}` : ''}`;
       document.querySelector('#offer-details').textContent = `Расстояние: ${order.distance} м · Оплата: ${order.reward} ₽ · Время: ${order.deliveryTime} сек.\n${order.requiredTransport ? 'Требуется' : 'Рекомендуемый транспорт'}: ${transportFor(order.requiredTransport || order.recommendedTransport).name}`;
     } else if (managerIsActive(order)) {
       this.objective.textContent = order.status === ORDER_STATUS.ACCEPTED
-        ? `${typeLabel}${progress} · Заберите заказ в ${order.restaurant.name}` : `${typeLabel}${progress} · Доставьте заказ: ${order.customer.name}`;
+        ? `Заберите · ${order.restaurant.name}${progress}` : `Доставьте · ${order.customer.name}${progress}`;
+      this.details.textContent = `${typeLabel} · Базовая оплата: ${order.reward} ₽\nРесторан: ${order.restaurant.name}\nКлиент: ${order.customer.name}\n${order.requiredTransport ? 'Требуется' : 'Рекомендуется'}: ${transportFor(order.requiredTransport || order.recommendedTransport).name}`;
     } else {
       this.objective.textContent = order.status === ORDER_STATUS.DELIVERED ? `${typeLabel}${progress} · ЗАКАЗ ДОСТАВЛЕН` : 'ВРЕМЯ ВЫШЛО';
       this.result.hidden = false;
@@ -68,7 +87,7 @@ export class OrderUI {
     this.distance.hidden = false;
     const pickup = this.manager.order.status === ORDER_STATUS.ACCEPTED;
     this.distance.textContent = `До ${pickup ? 'ресторана' : 'клиента'}: ${Math.round(Math.hypot(this.player.x - target.x, this.player.y - target.y) * BALANCE.metersPerPixel)} м`;
-    this.interaction.hidden = !this.manager.canInteract(this.player);
+    this.interaction.hidden = this.player.inputBlocked || !this.manager.canInteract(this.player);
     this.interaction.textContent = pickup ? 'ЗАБРАТЬ ЗАКАЗ · E' : 'ПЕРЕДАТЬ ЗАКАЗ · E';
   }
 
@@ -78,6 +97,7 @@ export class OrderUI {
     this.acceptButton.removeEventListener('click', this.accept);
     this.interaction.removeEventListener('click', this.interact);
     this.key.off('down', this.interact);
+    this.toggle.removeEventListener('click', this.toggleDetails);
   }
 }
 

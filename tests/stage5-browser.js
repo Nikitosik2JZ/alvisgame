@@ -13,7 +13,7 @@ let scene;
 const check = (condition, message) => { if (!condition) throw new Error(message); log.textContent += `PASS: ${message}\n`; };
 const click = selector => document.querySelector(selector).click();
 const position = (x, y) => { scene.player.setPosition(x, y); scene.player.body.reset(x, y); };
-const key = async (name, ms) => { scene.player.keys[name].isDown = true; await wait(ms); scene.player.keys[name].isDown = false; await wait(50); };
+const key = async (name, ms) => { scene.player.movementInput.keys[name].isDown = true; await wait(ms); scene.player.movementInput.keys[name].isDown = false; await wait(50); };
 const forceOrder = type => {
   const t = transportFor(state.getSnapshot().equippedTransport), weights = Object.entries(t.orderWeights);
   const total = weights.reduce((sum, [, w]) => sum + w, 0); let before = 0;
@@ -30,7 +30,7 @@ const complete = async () => {
 async function moveTo(x, y) {
   for (const [axis, goal, positive, negative] of [['x', x, 'D', 'A'], ['y', y, 'S', 'W']]) {
     const start = scene.player[axis], increasing = goal > start;
-    scene.player.keys[increasing ? positive : negative].isDown = true;
+    scene.player.movementInput.keys[increasing ? positive : negative].isDown = true;
     const until = performance.now() + 12000;
     while (Math.abs(scene.player[axis] - goal) > 8 && (increasing ? scene.player[axis] < goal : scene.player[axis] > goal)) {
       if (performance.now() > until) throw new Error(`Route stuck: ${axis} ${scene.player[axis]} -> ${goal}`);
@@ -71,9 +71,9 @@ async function verify() {
       position(1200, 1000); const start = scene.player.x; await key('D', 250);
       check(scene.player.x > start + 20, `${t.id}: desktop movement`);
       position(1200, 1000);
-      scene.player.touch.add('right'); await wait(150);
-      scene.player.touch.delete('right'); await wait(30);
-      check(scene.player.x > 1210, `${t.id}: mobile direction movement`);
+      scene.player.movementInput.pointer = -1; scene.player.movementInput.vector = { x: 1, y: 0 }; await wait(150);
+      scene.player.movementInput.reset(); await wait(30);
+      check(scene.player.x > 1210, `${t.id}: analog input movement`);
       position(530, 600); await key('D', 250); check(scene.player.x <= 554.5, `${t.id}: building collision`);
       position(810, 800); await key('W', 600); check(scene.player.y < 750, `${t.id}: narrow passage between buildings`);
       forceOrder('STANDARD'); scene.orders.accept(); position(1200, 1000);

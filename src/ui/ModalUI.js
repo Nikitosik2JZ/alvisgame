@@ -13,6 +13,7 @@ export class ModalUI {
       player.clearInput();
       scene.input.keyboard.enabled = false;
       this.dialog.showModal();
+      document.querySelector('#interact').hidden = true;
       this.closeButton.focus();
     };
     this.close = () => {

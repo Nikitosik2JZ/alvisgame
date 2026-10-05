@@ -109,3 +109,13 @@ See [STAGE4.md](STAGE4.md) for the historical Stage 4 implementation and balance
 ## Stage 5: garage and transport progression
 
 See [STAGE5.md](STAGE5.md) for current prices, speeds, order pools, transport events, weather, fragile protection, save migration, debug controls and verification. Open **ГАРАЖ** from the HUD to buy permanent vehicles or switch freely after completing an active order. The bicycle remains available through the existing shop/profile controls. Stage 6 is not implemented.
+
+## Mobile UX pass
+
+Compact layout uses `(max-width: 900px), (pointer: coarse)` without user-agent detection. It starts with a 50px status bar; the chevron shows/hides existing HUD details and remembers the choice for the session, including district restarts. The menu contains shop, profile (including event history), garage and districts. Desktop defaults to the expanded HUD and retains WASD, arrow keys and E.
+
+Mobile offers are bottom cards; active objectives sit below the HUD with optional details. Safe-area padding protects the HUD and bottom controls. Dialog content scrolls internally while its header/close control stays reachable. Menus and dialogs clear movement and block gameplay actions; closing requires fresh joystick input.
+
+The fixed bottom-left joystick has a 100–128px translucent base (108px in narrow landscape). `src/input/MovementInput.js` configures a 12% dead zone and maximum 44px radius, capped at `base width / 2 - 20px` to keep the stick inside the base. Beyond the dead zone, strength scales linearly to one; keyboard diagonals and joystick magnitude are capped at one. Transport, equipment, weather and temporary effects still determine speed. Pointer release, cancellation, lost capture, blur, visibility loss and resize reset input.
+
+Run `npm test` and `npm run build`. With an installed playwright-core and Chrome, run `node tests/mobile-ux-browser.cjs` (`PLAYWRIGHT_MODULE`, `CHROME_PATH`, `GAME_URL` optional). Browser checks cover 390×844, 430×932, 844×390, 320×568 and desktop, touch input, modal blocking, delivery, transport speeds and console errors. Screenshots go to `ARTIFACT_DIR` or the system temporary directory. Physical iOS/Android notch and browser-toolbar behavior still need device testing.
