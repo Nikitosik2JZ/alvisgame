@@ -103,7 +103,7 @@ const artifacts = process.env.ARTIFACT_DIR || path.join(require('node:os').tmpdi
     page.on('pageerror',e=>errors.push(e.message));
     await page.goto(process.env.GAME_URL || 'http://127.0.0.1:5174');
     await page.waitForFunction(async()=>{const {game}=await import(document.querySelector('script[src*="/src/main.js"]').src);const scene=game.scene.getScene('GameScene');if(scene?.orders?.order){window.s=scene;return true;}return false;});
-    await page.evaluate(async()=>{const {game}=await import(document.querySelector('script[src*="/src/main.js"]').src);window.s=game.scene.getScene('GameScene');});
+    await page.evaluate(async()=>{const {game}=await import(document.querySelector('script[src*="/src/main.js"]').src);window.s=game.scene.getScene('GameScene');s.deliveryEvents.random=()=>.99;});
     assert.equal(await page.locator('#joystick').isVisible(),false);
     assert.ok(await page.locator('h1').isVisible());
     for (const keys of [['d'],['ArrowRight'],['w','d']]) {

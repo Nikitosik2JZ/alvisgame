@@ -121,7 +121,7 @@
         <div id="company-business" hidden>
           <nav class="company-tabs" aria-label="Управление компанией">
             <button data-company-view="dashboard">ОБЗОР</button><button data-company-view="employees">КУРЬЕРЫ</button>
-            <button data-company-view="vehicles">ТРАНСПОРТ КОМПАНИИ</button><button data-company-view="upgrades">УЛУЧШЕНИЯ</button>
+            <button data-company-view="vehicles">ТРАНСПОРТ</button><button data-company-view="upgrades">УЛУЧШЕНИЯ</button>
           </nav>
           <section data-company-panel="dashboard">
             <h3 id="company-display-name"></h3><dl id="company-summary" class="company-summary"></dl>
@@ -130,12 +130,11 @@
           </section>
           <section data-company-panel="employees" hidden>
             <h3>КУРЬЕРЫ</h3><p id="company-capacity"></p><div id="company-employees" class="company-cards"></div>
-            <article class="shop-item"><h3>НАНЯТЬ КУРЬЕРА <span id="company-candidate"></span></h3>
-              <p id="company-candidate-details"></p><p id="company-hire-status" role="status"></p><button id="company-hire">НАНЯТЬ</button>
-            </article>
+            <h3>КАНДИДАТЫ</h3><p id="company-hire-status" role="status"></p>
+            <div id="company-candidates" class="company-cards"></div><button id="company-refresh">ОБНОВИТЬ КАНДИДАТОВ</button>
           </section>
           <section data-company-panel="vehicles" hidden><h3>ТРАНСПОРТ КОМПАНИИ</h3><p class="modal-note">Отдельный автопарк. Личный велосипед, мопед и автомобиль остаются в вашем гараже. Освободите транспорт у курьера, выбрав «Пешком», затем назначьте другому.</p><div id="company-vehicles" class="company-cards"></div></section>
-          <section data-company-panel="upgrades" hidden><h3>УЛУЧШЕНИЯ</h3><article class="shop-item"><h3 id="company-upgrade-title"></h3><p id="company-upgrade-details"></p><button id="company-upgrade">УЛУЧШИТЬ КОМПАНИЮ</button></article></section>
+          <section data-company-panel="upgrades" hidden><h3>ОФИС</h3><article class="shop-item"><h3 id="company-upgrade-title"></h3><p id="company-upgrade-details"></p><button id="company-upgrade">УЛУЧШИТЬ ОФИС</button></article><h3>УЛУЧШЕНИЯ КОМПАНИИ</h3><div id="company-upgrades" class="company-cards"></div></section>
         </div>
       </div>
     </dialog>

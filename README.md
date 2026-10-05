@@ -62,7 +62,7 @@ tests/browser-check.cjs              Browser integration and responsive checks
 
 Order states: AVAILABLE → ACCEPTED → PICKED_UP → DELIVERED. ACCEPTED and PICKED_UP can transition to FAILED. Only one offer or active order exists. Restaurants reuse existing colored buildings and their static bodies; entrances and customers sit outside obstacles on walkable ground.
 
-`GameState.getSaveData()` returns version 6 with all version 5 personal fields plus separate company ownership, workforce, fleet, income ledger, statistics, activity log and update timestamp. Equipment uses only SHOES/BAG; personal vehicles appear only in ownedTransports. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through the existing LOCAL PlatformService and saves progression changes automatically. Active orders and temporary effects remain session-only. See [STAGE5.md](STAGE5.md) for personal migration rules and [STAGE6.md](STAGE6.md) for company persistence and offline income.
+`GameState.getSaveData()` returns version 7 with all personal fields plus company workforce, fleet, ledgers, statistics, office, upgrades, candidates, reputation and gameplay-time business effects. Equipment uses only SHOES/BAG; personal vehicles appear only in ownedTransports. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through the existing LOCAL PlatformService and saves progression changes automatically. Active personal orders/effects remain session-only; resolved business effects persist. See [STAGE5.md](STAGE5.md) for personal migration and [STAGE7.md](STAGE7.md) for current company persistence and offline progression, including Stage 6 migration.
 
 ## Verification
 
@@ -109,11 +109,19 @@ See [STAGE4.md](STAGE4.md) for the historical Stage 4 implementation and balance
 
 See [STAGE5.md](STAGE5.md) for personal prices, speeds, order pools, transport events, weather, fragile protection, save migration, debug controls and verification. Open **ГАРАЖ** from the HUD to buy permanent personal vehicles or switch freely after completing an active order. The personal bicycle is available only in the garage, alongside walking, moped and car.
 
-## Stage 6: own delivery company
+## Stage 6: company foundation (historical)
 
 See [STAGE6.md](STAGE6.md) for the complete company configuration, data model, income ledger, offline safety, debug controls and verification. Open **КОМПАНИЯ** from the HUD or secondary mobile menu at level 12 for 40,000 ₽. Hire generic named couriers for 2,500 ₽, buy a separate company bicycle (3,000 ₽) or moped (8,000 ₽), and assign free vehicles. Walking/bicycle/moped employees earn 100/180/300 ₽ per minute at 100% efficiency. Income waits in the company balance until collected; online storage and offline duration are limited to two hours. Levels 1/2/3 allow 2/4/6 couriers, with upgrades costing 15,000/40,000 ₽. Personal gameplay remains available.
 
-`npm test` covers company transactions, elapsed-time income, collection, caps, malformed saves and migration. `node tests/company-browser.cjs` verifies the full company loop on desktop and four mobile viewports (same environment options as the existing browser scripts). Development-only Alt+C/M/H/O open a test company, grant company credit, hire a test courier and simulate one hour offline. No Stage 7 systems are included.
+Stage 6 introduced company transactions, elapsed-time income, collection, caps and migration, plus development-only Alt+C/M/H/O. Current company tests and features are described below.
+
+## Stage 7: company management
+
+See [STAGE7.md](STAGE7.md) for all configurable prices, formulas, events, save rules and debug shortcuts. Hire three generated candidates with five archetypes, compare efficiency/reliability/speed, expand employees to level 10, buy separate company cars and grow four office levels (2/4/7/12 slots). Dispatch, routing, training and advertising have three levels each. Company reputation and business rank are separate from personal progression.
+
+The four company tabs use scrolling cards and collapsible employee details. Rare business events include positive bonuses, temporary setbacks and four decisions, with protected company-only forced fines. Offline progression remains capped at two hours and now awards employee XP without random events or negative fines. Stage 6 company saves migrate without losing workforce, vehicles or balances.
+
+`npm test` covers Stage 7 rules and all personal systems. With the development server running, `node tests/company-browser.cjs` checks desktop plus 390×844, 430×932, 844×390 and 320×568, including personal deliveries, events, reload and migration. `node tests/company-runtime-browser.cjs` checks shortcuts, typing guards, their exclusion from production and production mobile offline/hiring screens; start `npm run preview -- --port 5176` or set `PREVIEW_URL`. Existing mobile/screens checks and the Stage 5 harness remain available. Screenshots are local ignored artifacts.
 
 ## Mobile UX pass
 

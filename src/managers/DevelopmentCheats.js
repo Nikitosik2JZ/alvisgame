@@ -1,12 +1,28 @@
 import { xpForLevel } from '../config/gameBalance.js';
 import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
-import { COMPANY } from '../config/companyConfig.js';
+import { COMPANY, employeeXpRequired } from '../config/companyConfig.js';
 
 export function setupDevelopmentCheats(scene, state) {
   if (!import.meta.env.DEV) return;
   const handler = (event) => {
     if (event.repeat) return;
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName)) return;
+    if (event.altKey && ['KeyR', 'KeyP', 'KeyL', 'Digit1', 'Digit2', 'Digit3', 'KeyU', 'KeyT'].includes(event.code)) {
+      event.preventDefault(); const company = scene.company, s = state.values;
+      if (!s.companyUnlocked) return;
+      if (event.code === 'KeyR') company.refreshCandidates(true);
+      else if (event.code === 'KeyP') { company.reputation(50); state.refresh(); }
+      else if (event.code === 'KeyL') {
+        company.tick(); const employee = s.employees[0];
+        if (employee) company.addXp(employee, employeeXpRequired(employee.level)); state.refresh();
+      } else if (event.code === 'KeyU') {
+        const next = COMPANY.levels.find(level => level.level === s.officeLevel + 1);
+        if (next) { state.update({ money: s.money + next.price }); company.upgrade(); }
+      } else if (event.code === 'KeyT') {
+        company.tick(); company.accrue(5 * 60000); company.events.advance(5 * 60000); state.refresh();
+      } else company.events.debug({ Digit1: 'POSITIVE', Digit2: 'NEGATIVE', Digit3: 'CHOICE' }[event.code]);
+      console.debug(`[Development] ${event.code}: Stage 7 company command`); return;
+    }
     if (event.altKey && ['KeyC', 'KeyM', 'KeyH', 'KeyO'].includes(event.code)) {
       event.preventDefault(); const company = scene.company;
       if (event.code === 'KeyC') {
@@ -15,7 +31,8 @@ export function setupDevelopmentCheats(scene, state) {
       } else if (event.code === 'KeyM') {
         if (state.values.companyUnlocked) { state.values.companyBalance += 10000; state.refresh(); }
       } else if (event.code === 'KeyH') {
-        state.update({ money: state.values.money + COMPANY.hireCost }); company.hire();
+        if (state.values.companyUnlocked && !company.candidate()) company.refreshCandidates(true);
+        state.update({ money: state.values.money + (company.candidate()?.price || COMPANY.hireCost) }); company.hire();
       } else {
         company.tick(); state.values.lastCompanyUpdateTimestamp = Date.now() - 3600000; company.resumeOffline();
         company.offlineNoticeShown = false; scene.companyUI.pendingOffline = company.offlineEarned > 0;

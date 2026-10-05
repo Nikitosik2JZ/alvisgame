@@ -16,7 +16,7 @@ export const ECONOMY = Object.freeze({
   carLevel: 10,
   carSpeed: 420,
   companyBaseIncome: 100,
-  companyTransportMultipliers: Object.freeze({ WALKING: 1, BICYCLE: 1.8, MOPED: 3 }),
+  companyTransportMultipliers: Object.freeze({ WALKING: 1, BICYCLE: 1.5, MOPED: 2.4, CAR: 3.6 }),
   transportOrderWeights: {
     WALKING: { STANDARD: 65, URGENT: 20, FRAGILE: 10 },
     BICYCLE: { STANDARD: 55, URGENT: 23, FRAGILE: 12, DOUBLE: 10 },

@@ -149,3 +149,16 @@ body:has(dialog[open]) .interact { display: none; }
 #company-offline button { margin: 8px 4px; }
 #company-log { padding-left: 20px; color: #b5c4bd; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 #company-log li { margin-bottom: 6px; }
+#company-candidates p, #company-upgrades p, #company-employees [data-income-formula], #company-event-effects { white-space: pre-line; }
+#company-employees details { margin: 10px 0; border-top: 1px solid #ffffff25; }
+#company-employees summary { min-height: 44px; padding: 14px 0; cursor: pointer; color: #c4df8c; font-size: 13px; touch-action: manipulation; }
+#company-employees [data-income-formula] { font-size: 11px; overflow-wrap: anywhere; }
+#company-event-buttons { display: grid; gap: 12px; }
+#company-event-buttons button { width: 100%; white-space: pre-line; line-height: 1.5; }
+#company-event-effects { line-height: 1.5; color: #ffe6a9; }
+#company-event-dialog[open] { display: flex; flex-direction: column; }
+#company-event-dialog .modal-header { flex-direction: column; align-items: flex-start; flex-shrink: 0; }
+#company-event-dialog .modal-header span { order: -1; font-size: 10px; color: #b5c4bd; letter-spacing: 1px; }
+#company-event-dialog .modal-content { min-height: 0; }
+.company-tabs { position: sticky; top: -12px; background: #182b29; padding: 8px 0; z-index: 1; }
+#company-refresh { width: 100%; }

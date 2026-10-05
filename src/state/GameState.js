@@ -21,7 +21,9 @@ export class GameState {
     return { ...this.values, unlockedDistricts: [...this.values.unlockedDistricts], ownedTransports: [...this.values.ownedTransports],
       transportMilestones: [...this.values.transportMilestones], ownedItems: [...this.values.ownedItems], equippedItems: { ...this.values.equippedItems },
       employees: this.values.employees.map(e => ({ ...e })), companyVehicles: this.values.companyVehicles.map(v => ({ ...v })),
-      companyStats: { ...this.values.companyStats }, companyLog: [...this.values.companyLog] };
+      companyStats: { ...this.values.companyStats }, companyLog: [...this.values.companyLog],
+      companyCandidates: this.values.companyCandidates.map(c => ({ ...c })), companyUpgrades: { ...this.values.companyUpgrades },
+      companyEffects: this.values.companyEffects.map(e => ({ ...e })), companyEventState: { ...this.values.companyEventState } };
   }
 
   refresh() {
@@ -140,7 +142,7 @@ export class GameState {
     this.values.selectedDistrict = id; this.refresh(); return true;
   }
 
-  getSaveData() { return { version: 6, ...this.getSnapshot() }; }
+  getSaveData() { return { version: 7, ...this.getSnapshot() }; }
 
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;

@@ -1,33 +1,122 @@
-import { COMPANY, companyLevel, companyName, companyVehicle } from '../config/companyConfig.js';
+import { COMPANY, companyLevel, companyName, companyVehicle, archetypeFor, clampStat, employeeXpRequired, upgradeEffect } from '../config/companyConfig.js';
+import { normalizeEmployee } from '../state/companyState.js';
+import { CompanyEventManager } from './CompanyEventManager.js';
 
 // The ledger is mathematical. No employee sprites, routes or per-frame payouts.
 export class CompanyManager {
   constructor(state, { wallNow = Date.now, now = () => performance.now(), random = Math.random } = {}) {
     this.state = state; this.wallNow = wallNow; this.now = now; this.random = random;
-    this.lastTick = now(); this.activityElapsed = 0; this.offlineEarned = 0;
+    this.lastTick = now(); this.offlineEarned = 0;
+    this.events = new CompanyEventManager(this);
+    if (state.values.companyUnlocked && state.values.candidateGeneration === 0) this.generateCandidates();
   }
 
-  employeeRate(employee, snapshot = this.state.values) {
-    if (employee.status !== 'WORKING') return 0;
+  employeeEfficiency(employee, snapshot = this.state.values) {
+    return employee.efficiency * (1 + (employee.level - 1) * COMPANY.levelEfficiencyBonus + employee.permanentEfficiencyBonus)
+      * (1 + upgradeEffect('routing', snapshot));
+  }
+  employeeReliability(employee) { return employee.reliability + (employee.level - 1) * COMPANY.levelReliabilityBonus; }
+  effect(kind, employeeId = null, snapshot = this.state.values) {
+    return snapshot.companyEffects.filter(e => e.kind === kind && e.until > snapshot.companyActiveTimeMs && e.employeeId === employeeId).reduce((sum, e) => sum + e.value, 0);
+  }
+  failureChance(employee, snapshot = this.state.values, baseline = false) {
+    return Math.max(COMPANY.failureRange[0], Math.min(COMPANY.failureRange[1], COMPANY.baseFailureChance
+      + (1 - this.employeeReliability(employee)) * COMPANY.reliabilityFailureScale + (baseline ? 0 : this.effect('risk', null, snapshot))));
+  }
+  incomeFactors(employee, snapshot = this.state.values, baseline = false) {
     const type = snapshot.companyVehicles.find(v => v.id === employee.assignedTransport)?.type || 'WALKING';
-    return employee.baseIncome * COMPANY.transportMultipliers[type] * employee.efficiency;
+    return { base: employee.baseIncome, transport: COMPANY.transportMultipliers[type], efficiency: this.employeeEfficiency(employee, snapshot),
+      speed: 1 + (employee.speed - 1) * COMPANY.transportSpeedInfluence[type], office: 1 + companyLevel(snapshot.officeLevel).bonus,
+      company: 1 + upgradeEffect('dispatch', snapshot) + upgradeEffect('advertising', snapshot)
+        + Math.min(COMPANY.reputation.incomeCap, snapshot.companyReputation * COMPANY.reputation.incomeScale),
+      reliability: 1 - this.failureChance(employee, snapshot, baseline) * COMPANY.failureIncomeLoss,
+      event: baseline ? 1 : Math.max(.5, 1 + this.effect('companyIncome', null, snapshot) + this.effect('employeeIncome', employee.id, snapshot)) };
+  }
+  employeeRate(employee, snapshot = this.state.values, baseline = false) {
+    if (employee.status === 'IDLE' || (!baseline && employee.status !== 'WORKING')) return 0;
+    return Object.values(this.incomeFactors(employee, snapshot, baseline)).reduce((product, value) => product * value, 1);
   }
   incomeRate(snapshot = this.state.values) { return snapshot.employees.reduce((sum, employee) => sum + this.employeeRate(employee, snapshot), 0); }
-  storageLimit(snapshot = this.state.values) { return Math.floor(this.incomeRate(snapshot) * COMPANY.storageCapMs / 60000); }
-  log(message) { this.state.values.companyLog.unshift(message); this.state.values.companyLog.length = Math.min(COMPANY.logLimit, this.state.values.companyLog.length); }
+  storageLimit(snapshot = this.state.values) { return Math.floor(snapshot.employees.reduce((sum, e) => sum + this.employeeRate(e, snapshot, true), 0) * COMPANY.storageCapMs / 60000); }
+  log(message) { this.state.values.companyLog.unshift(message.slice(0, 160)); this.state.values.companyLog.length = Math.min(COMPANY.logLimit, this.state.values.companyLog.length); }
 
-  accrue(elapsed) {
-    const s = this.state.values, rate = this.incomeRate();
-    if (!s.companyUnlocked || rate <= 0 || !Number.isFinite(elapsed) || elapsed <= 0) return 0;
+  reputation(delta) { this.state.values.companyReputation = Math.max(0, this.state.values.companyReputation + delta); }
+  addXp(employee, xp) {
+    if (employee.level >= COMPANY.employeeMaxLevel) { employee.currentXp = 0; return; }
+    employee.currentXp += xp;
+    while (employee.level < COMPANY.employeeMaxLevel && employee.currentXp >= employeeXpRequired(employee.level)) {
+      employee.currentXp -= employeeXpRequired(employee.level); employee.level++;
+      this.log(`${employee.name}: уровень ${employee.level}!`);
+    }
+    if (employee.level === COMPANY.employeeMaxLevel) employee.currentXp = 0;
+  }
+  deliveriesRate(employee, baseline = false) {
+    if (employee.status === 'IDLE' || (!baseline && employee.status !== 'WORKING')) return 0;
+    const f = this.incomeFactors(employee, this.state.values, baseline);
+    return COMPANY.deliveriesPerMinute * f.transport * f.efficiency * f.speed;
+  }
+  simulateWork(offline = false) {
+    const s = this.state.values;
+    for (const e of s.employees) {
+      const completed = Math.floor(e.workRemainder + 1e-9); e.workRemainder = Math.max(0, e.workRemainder - completed);
+      if (!completed) continue;
+      if (!offline) e.failureRemainder += completed * this.failureChance(e);
+      const failed = offline ? 0 : Math.floor(e.failureRemainder); e.failureRemainder -= failed;
+      const successful = completed - failed;
+      e.successfulDeliveries += successful; e.failedDeliveries += failed;
+      s.companyStats.employeeDeliveries += successful; s.companyStats.employeeFailures += failed;
+      this.addXp(e, successful * COMPANY.xpPerDelivery * (1 + upgradeEffect('training', s)));
+      this.reputation(successful * COMPANY.reputation.perDelivery - failed * COMPANY.reputation.perFailure);
+    }
+  }
+  credit(rates, elapsed) {
+    const s = this.state.values, rate = rates.reduce((sum, value) => sum + value, 0);
+    if (rate <= 0) return 0;
     const room = Math.max(0, this.storageLimit() - s.companyBalance - s.companyIncomeRemainder);
-    const earned = Math.min(room, rate * Math.min(elapsed, COMPANY.offlineCapMs) / 60000);
+    const earned = Math.min(room, rate * elapsed / 60000);
     if (earned <= 0) return 0;
-    for (const employee of s.employees) employee.totalEarned += earned * this.employeeRate(employee) / rate;
+    s.employees.forEach((employee, index) => { employee.totalEarned += earned * rates[index] / rate; });
     const credit = s.companyIncomeRemainder + earned;
     const rubles = Math.floor(credit + 1e-9);
     s.companyIncomeRemainder = Math.max(0, credit - rubles);
     s.companyBalance += rubles; s.companyLifetimeEarnings += rubles;
     return rubles;
+  }
+  creditBonus(amount) {
+    const s = this.state.values; s.companyBalance += amount; s.companyLifetimeEarnings += amount;
+  }
+  expireEffects() {
+    const s = this.state.values;
+    s.companyEffects = s.companyEffects.filter(e => e.until > s.companyActiveTimeMs);
+    for (const employee of s.employees) if (employee.status === 'TEMPORARILY_UNAVAILABLE' && employee.unavailableUntil <= s.companyActiveTimeMs) {
+      employee.status = 'WORKING'; employee.unavailableUntil = 0;
+      this.log(employee.recoveryMessage || `${employee.name} вернулся на линию.`); employee.recoveryMessage = '';
+    }
+  }
+  accrue(elapsed, offline = false) {
+    const s = this.state.values;
+    if (!s.companyUnlocked || !Number.isFinite(elapsed) || elapsed <= 0) return 0;
+    let remaining = Math.min(elapsed, COMPANY.offlineCapMs), earned = 0;
+    if (offline) {
+      // Freeze starting rates: no random events, failures or expiry of gameplay effects offline.
+      earned = this.credit(s.employees.map(e => this.employeeRate(e, s, true) * archetypeFor(e.archetype).offline), remaining);
+      for (const e of s.employees) e.workRemainder += this.deliveriesRate(e, true) * archetypeFor(e.archetype).offline * remaining / 60000;
+      this.simulateWork(true);
+    } else {
+      while (remaining > 0) {
+        this.expireEffects();
+        const deadlines = [...s.companyEffects.map(e => e.until), ...s.employees.filter(e => e.status === 'TEMPORARILY_UNAVAILABLE').map(e => e.unavailableUntil)];
+        const untilExpiry = Math.min(Infinity, ...deadlines.map(end => end - s.companyActiveTimeMs).filter(ms => ms > 0));
+        const step = Math.min(remaining, COMPANY.simulationStepMs - s.companySimulationRemainderMs, untilExpiry);
+        earned += this.credit(s.employees.map(e => this.employeeRate(e)), step);
+        for (const e of s.employees) e.workRemainder += this.deliveriesRate(e) * step / 60000;
+        s.companyActiveTimeMs += step; s.companySimulationRemainderMs += step; remaining -= step;
+        if (s.companySimulationRemainderMs >= COMPANY.simulationStepMs - 1e-6) { this.simulateWork(); s.companySimulationRemainderMs = 0; }
+      }
+      this.expireEffects();
+    }
+    s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
+    return earned;
   }
 
   resumeOffline() {
@@ -36,7 +125,8 @@ export class CompanyManager {
     if (!s.companyUnlocked) return 0;
     const elapsed = Number.isSafeInteger(timestamp) && timestamp > 0 && timestamp <= wall
       ? Math.min(COMPANY.offlineCapMs, wall - timestamp) : 0;
-    this.offlineEarned = this.accrue(elapsed);
+    this.offlineEarned = this.accrue(elapsed, true);
+    this.offlineNoticeShown = false;
     s.lastCompanyUpdateTimestamp = wall;
     if (this.offlineEarned > 0) this.log(`Пока вас не было: +${this.offlineEarned} ₽.`);
     this.state.refresh();
@@ -49,11 +139,7 @@ export class CompanyManager {
     if (!this.state.values.companyUnlocked) return 0;
     const earned = this.accrue(elapsed);
     this.state.values.lastCompanyUpdateTimestamp = this.wallNow();
-    this.activityElapsed += elapsed;
-    if (earned > 0 && this.activityElapsed >= COMPANY.activityIntervalMs) {
-      this.log('Курьеры завершили несколько заказов. Сегодня у компании хороший день.');
-      this.activityElapsed = 0;
-    }
+    this.events.advance(Math.min(elapsed, COMPANY.offlineCapMs));
     this.state.refresh();
     return earned;
   }
@@ -61,14 +147,18 @@ export class CompanyManager {
   start() {
     if (this.timer) return;
     this.resumeOffline();
-    this.timer = setInterval(() => this.tick(), COMPANY.tickMs);
-    this.onHide = () => { if (document.visibilityState === 'hidden') this.tick(); };
-    this.onPageHide = () => this.tick();
+    this.hidden = document.visibilityState === 'hidden';
+    this.timer = setInterval(() => { if (!this.hidden) this.tick(); }, COMPANY.tickMs);
+    this.onHide = () => {
+      if (document.visibilityState === 'hidden') { this.tick(); this.hidden = true; }
+      else { this.hidden = false; this.resumeOffline(); }
+    };
+    this.onPageHide = () => { if (!this.hidden) this.tick(); };
     document.addEventListener('visibilitychange', this.onHide);
     window.addEventListener('pagehide', this.onPageHide);
   }
   destroy() {
-    this.tick(); clearInterval(this.timer); this.timer = null;
+    if (!this.hidden) this.tick(); clearInterval(this.timer); this.timer = null;
     document.removeEventListener('visibilitychange', this.onHide);
     window.removeEventListener('pagehide', this.onPageHide);
   }
@@ -79,8 +169,26 @@ export class CompanyManager {
     this.state.values.money -= price; return true;
   }
   nextId(prefix, entries) { let index = 1; while (entries.some(entry => entry.id === `${prefix}-${index}`)) index++; return `${prefix}-${index}`; }
-  candidate() {
-    return { name: COMPANY.employeeNames[Math.min(COMPANY.employeeNames.length - 1, Math.max(0, Math.floor(this.random() * COMPANY.employeeNames.length)))], level: 1, efficiency: 1, baseIncome: COMPANY.baseIncome };
+  roll() { return Math.min(.999999999, Math.max(0, this.random())); }
+  generateCandidates() {
+    const s = this.state.values; s.candidateGeneration++;
+    const pool = Object.keys(COMPANY.archetypes), start = Math.floor(this.roll() * pool.length);
+    s.companyCandidates = Array.from({ length: COMPANY.candidateCount }, (_, index) => {
+      const archetype = pool[(start + index) % pool.length], config = archetypeFor(archetype);
+      const stats = Object.fromEntries(['efficiency', 'reliability', 'speed'].map(key => [key,
+        Math.round(clampStat(key, config[key][0] + this.roll() * (config[key][1] - config[key][0])
+          + Math.min(COMPANY.reputation.candidateStatCap, s.companyReputation * COMPANY.reputation.candidateScale)) * 1000) / 1000]));
+      return { id: `candidate-${s.candidateGeneration}-${index}`, name: COMPANY.employeeNames[(Math.floor(this.roll() * COMPANY.employeeNames.length) + index) % COMPANY.employeeNames.length], archetype, ...stats, price: config.cost };
+    });
+    return s.companyCandidates;
+  }
+  candidate() { return this.state.values.companyCandidates[0]; }
+  refreshCandidates(debug = false) {
+    const blocked = this.requireCompany(); if (blocked) return blocked;
+    const s = this.state.values, price = s.candidateRefreshes === 0 ? 0 : COMPANY.refreshCost;
+    if (!debug && !this.spend(price)) return { ok: false, reason: 'Не хватает денег на обновление кандидатов' };
+    if (!debug) s.candidateRefreshes++;
+    this.generateCandidates(); this.state.refresh(); return { ok: true };
   }
 
   openCompany(name) {
@@ -89,6 +197,7 @@ export class CompanyManager {
     if (s.level < COMPANY.unlockLevel) return { ok: false, reason: `Требуется уровень ${COMPANY.unlockLevel}` };
     if (!this.spend(COMPANY.unlockPrice)) return { ok: false, reason: 'Не хватает денег на открытие компании' };
     s.companyUnlocked = true; s.companyName = companyName(name); s.lastCompanyUpdateTimestamp = this.wallNow(); this.lastTick = this.now();
+    this.generateCandidates();
     this.log('Собственная служба доставки открыта. Пора нанимать людей.'); this.state.refresh();
     return { ok: true };
   }
@@ -96,15 +205,18 @@ export class CompanyManager {
     const blocked = this.requireCompany(); if (blocked) return blocked;
     this.state.values.companyName = companyName(name); this.state.refresh(); return { ok: true };
   }
-  hire(candidate = this.candidate()) {
+  hire(candidateId = this.candidate()?.id) {
     const blocked = this.requireCompany(); if (blocked) return blocked;
     this.tick(); const s = this.state.values;
-    if (s.employees.length >= companyLevel(s.companyLevel).slots) return { ok: false, reason: 'НЕТ СВОБОДНЫХ МЕСТ. Улучшите компанию.' };
-    if (!this.spend(COMPANY.hireCost)) return { ok: false, reason: 'Не хватает денег на найм' };
-    const employee = { id: this.nextId('courier', s.employees), name: companyName(candidate?.name), level: 1,
-      efficiency: 1, assignedTransport: null, baseIncome: COMPANY.baseIncome, status: 'WORKING', totalEarned: 0 };
+    if (s.employees.length >= companyLevel(s.officeLevel).slots) return { ok: false, reason: 'НЕТ СВОБОДНЫХ МЕСТ. Улучшите офис.' };
+    const candidate = s.companyCandidates.find(c => c.id === candidateId);
+    if (!candidate) return { ok: false, reason: 'Кандидат больше не доступен' };
+    if (!this.spend(candidate.price)) return { ok: false, reason: 'Не хватает денег на найм' };
+    const employee = normalizeEmployee({ ...candidate, id: this.nextId('courier', s.employees) });
+    s.companyCandidates = s.companyCandidates.filter(c => c.id !== candidate.id);
     s.employees.push(employee); s.companyStats.employeesHired++;
     this.log(`${employee.name} вышел на линию.${s.employees.length === 1 ? ' Первый курьер компании!' : ''}`);
+    s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
     this.state.refresh(); return { ok: true, employee: { ...employee } };
   }
   buyVehicle(type) {
@@ -124,6 +236,7 @@ export class CompanyManager {
     if (vehicleId !== null && s.employees.some(e => e.id !== employeeId && e.assignedTransport === vehicleId)) return { ok: false, reason: 'Транспорт занят. Сначала переведите другого курьера на пешие доставки.' };
     this.tick(); employee.assignedTransport = vehicleId;
     const type = s.companyVehicles.find(v => v.id === vehicleId)?.type;
+    s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
     this.log(`${employee.name}: ${companyVehicle(type)?.name || 'пешие доставки'}.`); this.state.refresh(); return { ok: true };
   }
   collect() {
@@ -135,9 +248,21 @@ export class CompanyManager {
   }
   upgrade() {
     const blocked = this.requireCompany(); if (blocked) return blocked;
-    this.tick(); const s = this.state.values, next = COMPANY.levels.find(level => level.level === s.companyLevel + 1);
+    this.tick(); const s = this.state.values, next = COMPANY.levels.find(level => level.level === s.officeLevel + 1);
     if (!next) return { ok: false, reason: 'Достигнут максимальный уровень компании' };
     if (!this.spend(next.price)) return { ok: false, reason: 'Не хватает денег на улучшение' };
-    s.companyLevel = next.level; this.log(`Компания улучшена до уровня ${next.level}.`); this.state.refresh(); return { ok: true };
+    s.companyLevel = s.officeLevel = next.level; this.reputation(COMPANY.reputation.perUpgrade);
+    this.log(`Офис: ${next.name}.`); s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
+    this.state.refresh(); return { ok: true };
+  }
+  upgradeBranch(key) {
+    const blocked = this.requireCompany(); if (blocked) return blocked;
+    if (!Object.hasOwn(COMPANY.upgrades, key)) return { ok: false, reason: 'Улучшение не найдено' };
+    this.tick(); const s = this.state.values, config = COMPANY.upgrades[key], level = s.companyUpgrades[key];
+    if (level >= config.costs.length) return { ok: false, reason: 'Максимальный уровень улучшения' };
+    if (!this.spend(config.costs[level])) return { ok: false, reason: 'Не хватает денег на улучшение' };
+    s.companyUpgrades[key]++; this.reputation(COMPANY.reputation.perUpgrade); this.log(`${config.name}: уровень ${level + 1}.`);
+    s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
+    this.state.refresh(); return { ok: true };
   }
 }
