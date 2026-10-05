@@ -89,5 +89,30 @@ button:focus-visible { outline: 3px solid #87e4fa; outline-offset: 2px; }
 #event-buttons button { width: 100%; white-space: pre-line; line-height: 1.5; }
 .event-dialog .modal-header h2 { overflow-wrap: anywhere; }
 .hud-actions { flex-wrap: wrap; }
+#garage-items { display: grid; gap: 12px; }
+#garage-feedback, #profile-feedback, #transport-goal, #garage-goal, #offer-details { white-space: pre-line; }
+#garage-feedback { color: #ffe6a9; }
+.shop-item[data-state="EQUIPPED"] { border-color: #c4df8c; background: #344539; }
+.transport-celebration { position: absolute; inset: 60px 0 0; z-index: 2; padding: 30px 24px; text-align: center; background: #263c38; overflow-y: auto; }
+#garage-dialog:has(#transport-celebration:not([hidden])) { height: min(640px, calc(100dvh - 24px)); }
+.transport-celebration h2 { color: #c4df8c; font-size: clamp(22px, 5vw, 34px); }
+.transport-celebration h3 { color: #ffe6a9; font-size: 24px; }
+.transport-celebration p { line-height: 1.6; }
+.transport-celebration button { width: 100%; margin-top: 16px; }
+#transport-milestone { position: fixed; bottom: 160px; left: 20px; width: min(380px, calc(100% - 40px)); padding: 18px; background: #344539f5; color: #ffe6a9; border: 1px solid #c4df8c; border-radius: 14px; white-space: pre-line; line-height: 1.5; pointer-events: none; }
+@media (max-width: 700px) { .hud h1 { font-size: 18px; margin: 5px 0 8px; } .hud-actions { gap: 6px; } .hud-actions button { flex: 1; padding: 8px; } .progression-goal { font-size: 10px; } .xp { margin-top: 6px; } }
+@media (max-height: 450px) { .hud .eyebrow, .hud h1 { display: none; } .hud-actions { margin-top: 8px; } .touch-controls { display: grid; } .controls-hint { display: none; } }
 
-@media (max-width: 700px) { .hud-actions button { font-size: 12px; padding: 10px; } }
+@media (max-width: 900px) and (min-height: 451px) {
+  .hud { left: 12px; right: 12px; max-width: none; }
+  .order-panel { top: var(--hud-bottom, 260px); left: 12px; right: 12px; width: auto; }
+}
+@media (max-width: 360px) and (min-height: 451px) {
+  .hud { padding: 10px 12px; }
+  .hud .eyebrow { display: none; }
+  .hud h1 { font-size: 16px; }
+  .hud-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 8px; }
+  .hud-actions button { font-size: 10px; padding: 8px 2px; min-height: 40px; }
+  .stats { font-size: 10px; }
+  .order-panel { padding: 10px 12px; font-size: 12px; line-height: 1.35; }
+}

@@ -1,7 +1,7 @@
 import { BALANCE } from '../config/gameBalance.js';
 import { EVENT_BALANCE } from '../config/eventBalance.js';
 
-export const TRANSPORT = Object.freeze({ WALKING: 'WALKING', BICYCLE: 'BICYCLE' });
+export { TRANSPORT } from '../config/transportConfig.js';
 export const CATEGORIES = Object.freeze(['SHOES', 'BAG', 'TRANSPORT']);
 export const SHOP_ITEMS = Object.freeze([
   Object.freeze({ id: 'old-shoes', name: 'Старые кроссовки', category: 'SHOES', price: BALANCE.oldShoesPrice, walkingBonus: BALANCE.oldShoesBonus, description: '+5% скорости пешком' }),

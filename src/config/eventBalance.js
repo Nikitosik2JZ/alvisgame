@@ -9,4 +9,8 @@ export const EVENT_BALANCE = {
   callTime: 15, callSuccess: .9, doorComplaint: .15, complaintReputation: -2,
   stairsMoney: 500, stairsTime: 20, friesCaught: .1, friesFine: 500, friesReputation: -5,
   closeOrderMoney: 1.05,
+  fragileMinimumRisk: .003,
+  mopedFuelTime: 6, parkingTime: 8, trafficSpeed: .85, trafficDuration: 12,
+  largeOrderBoost: 3,
+  transportNoticeDuration: 8,
 };

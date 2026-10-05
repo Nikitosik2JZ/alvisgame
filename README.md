@@ -62,19 +62,19 @@ tests/browser-check.cjs              Browser integration and responsive checks
 
 Order states: AVAILABLE → ACCEPTED → PICKED_UP → DELIVERED. ACCEPTED and PICKED_UP can transition to FAILED. Only one offer or active order exists. Restaurants reuse existing colored buildings and their static bodies; entrances and customers sit outside obstacles on walkable ground.
 
-`GameState.getSaveData()` returns version 3, unlockedDistricts, selectedDistrict, demandBonusOrders, money, level, total XP, reputation, ownedItems, equippedItems, transport and calculated movementSpeed. Loading old saves defaults to walking with no items; unknown items and invalid slots are discarded and speed/transport are recalculated from equipment. `loadSaveData(data)` validates finite numeric values and derives level from XP to repair inconsistent saved levels. Active orders are excluded. PlatformService retains localStorage support; automatic saving/loading is not enabled. Development-only logs report transitions and rewards without frame spam.
+`GameState.getSaveData()` returns version 4 with existing progression/equipment/district fields plus ownedTransports, equippedTransport, transportMilestones and largeOrderBoost. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through the existing LOCAL PlatformService and saves progression changes automatically. Active orders and temporary effects remain session-only. See [STAGE5.md](STAGE5.md) for the schema and migration rules.
 
 ## Verification
 
 `npm test` covers acceptance, proximity, duplicate rewards, expiry before/after pickup, next offers, level thresholds, save validation and all 18 restaurant/customer combinations.
 
-Optional browser integration requires an independently installed `playwright-core` and Chrome. Set `PLAYWRIGHT_MODULE` to the module path, `GAME_URL` to the dev URL, and optionally `CHROME_PATH`, then run `node tests/browser-check.cjs`. It walks a physical delivery route and checks collisions, keyboard pickup, button delivery, rewards, timer, failure and next offers. Repeated deliveries and expiry use accelerated setup for level-up/failure UI checks. Touch-capable responsive checks cover 390×844, 844×390 and 320×568. Browser errors fail the test. Screenshots are ignored local test artifacts.
+For the current browser integration checks, run the dev server and open `/tests/stage5-browser.html`. Click **Run Stage 5 browser checks**. The development-only harness verifies purchases, four physical delivery routes, narrow passages, collisions, directional movement, all eligible order types, events, switching restrictions, local saves and district restarts. It restores the starting progression afterward. The older `.cjs` browser scripts retain Stage 2–4 assumptions; use the Stage 5 harness for the current gameplay rules.
 
 Build and browser checks pass. Vite retains the existing Phaser bundle warning (roughly 1.2 MB minified), which does not prevent a successful production build.
 
 ## Limits
 
-Placeholder city and customer circles, approximate distance, one order, no route planner or automatic saves. Only walking and bicycle transport. No scooters, cars, businesses, employees, inventory grids, skins, multiplayer, Yandex SDK, ads, leaderboards or advanced graphics.
+Placeholder city and customer circles, approximate distance, one order, no route planner. Transport includes walking, bicycle, moped and car. Local saves are automatic; active orders and temporary effects do not survive reload. No fuel resource, maintenance, realistic driving, businesses, employees, multiplayer, Yandex SDK, ads, leaderboards or monetization.
 
 ## Stage 3: shop and equipment
 
@@ -97,11 +97,15 @@ Current routes pay 184–290 ₽ (mean about 253 ₽ across all 18 pairs). Old s
 
 In development only: **F2** grants 1000 ₽; **F3** grants 100 total XP. Each use logs to the console. These handlers are removed from the production build. No visible cheat buttons.
 
-Added modules: data/shopItems.js, managers/ShopManager.js, managers/DeliveryRewards.js, managers/DevelopmentCheats.js, ui/ModalUI.js, ui/ShopUI.js, ui/PlayerProfileUI.js. GameState owns purchases and equipment transactions; ShopManager supplies item availability and UI states. PlatformService remains the LOCAL adapter and automatic saving remains disabled, matching stage 2.
+Added modules in Stage 3: data/shopItems.js, managers/ShopManager.js, managers/DeliveryRewards.js, managers/DevelopmentCheats.js, ui/ModalUI.js, ui/ShopUI.js, ui/PlayerProfileUI.js. Stage 5 extends GameState with separate vehicle ownership and enables automatic saving through the existing LOCAL adapter.
 
-Progression verification: npm test includes purchase rejection/duplicate protection, equipment replacement, bicycle requirements, completion/failure payouts, snapshot isolation, old/corrupt saves and a representative full upgrade path. Run tests/progression-browser.cjs with the same PLAYWRIGHT_MODULE/GAME_URL setup as browser-check.cjs; optionally set PRODUCTION_URL to a Vite preview URL to verify production cheats are disabled. It physically rides a delivery route and checks shop/profile interaction, collision, deadlines, immediate stats/HUD, modal keyboard blocking, touch recovery, scrolling/close accessibility and screenshots at 1280×800, 390×844, 844×390 and 320×568. Browser errors fail the check. Screenshots are ignored local artifacts.
+Progression verification: npm test includes purchase rejection/duplicate protection, equipment replacement, vehicle requirements, completion/failure payouts, snapshot isolation, old/corrupt saves and a representative bicycle upgrade path. Stage 5 adds transport-pool, weather, fragile protection, progression and active-order restriction tests. Screenshots are ignored local artifacts.
 
 
 ## Stage 4: events, order types and districts
 
-See [STAGE4.md](STAGE4.md) for the complete implementation and balance reference, event outcomes, save migration, verification and limitations. Stage 5 is not included.
+See [STAGE4.md](STAGE4.md) for the historical Stage 4 implementation and balance reference.
+
+## Stage 5: garage and transport progression
+
+See [STAGE5.md](STAGE5.md) for current prices, speeds, order pools, transport events, weather, fragile protection, save migration, debug controls and verification. Open **ГАРАЖ** from the HUD to buy permanent vehicles or switch freely after completing an active order. The bicycle remains available through the existing shop/profile controls. Stage 6 is not implemented.

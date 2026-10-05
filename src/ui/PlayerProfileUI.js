@@ -2,6 +2,7 @@ import { xpForLevel } from '../config/gameBalance.js';
 import { itemById } from '../data/shopItems.js';
 import { ModalUI } from './ModalUI.js';
 import { reputationTier, DISTRICTS } from '../config/economyConfig.js';
+import { transportFor, careerTitle, nextTransportGoal } from '../config/transportConfig.js';
 
 export class PlayerProfileUI extends ModalUI {
   constructor(scene, state, player, events) {
@@ -17,15 +18,21 @@ export class PlayerProfileUI extends ModalUI {
     scene.events.once('shutdown', () => { historyButton.remove(); history.remove(); });
     this.walk = document.querySelector('#equip-walking');
     this.bicycle = document.querySelector('#equip-bicycle');
-    this.walk.onclick = () => state.unequipCategory('TRANSPORT');
-    this.bicycle.onclick = () => state.equipItem('bicycle');
+    const switchTransport = id => {
+      const result = state.equipTransport(id);
+      document.querySelector('#profile-feedback').textContent = result.ok ? `Транспорт: ${result.transport.name}` : result.reason;
+    };
+    this.walk.onclick = () => switchTransport('WALKING');
+    this.bicycle.onclick = () => switchTransport('BICYCLE');
     this.unsubscribe = state.subscribe(snapshot => {
-      const rows = [ ['Уровень', snapshot.level], ['Опыт', `${snapshot.xp} / ${xpForLevel(snapshot.level + 1)} XP`],
+      const next = nextTransportGoal(snapshot);
+      const rows = [ ['Статус', careerTitle(snapshot)], ['Уровень', snapshot.level], ['Опыт', `${snapshot.xp} / ${xpForLevel(snapshot.level + 1)} XP`],
         ['Репутация', `${snapshot.reputation} · ${reputationTier(snapshot.reputation).name}`], ['Деньги', `${snapshot.money} ₽`],
         ['Район', DISTRICTS[snapshot.selectedDistrict].name], ['Бонус спроса', `${snapshot.demandBonusOrders} заказов`],
-        ['Транспорт', snapshot.transport === 'BICYCLE' ? 'Велосипед' : 'Пешком'],
+        ['Транспорт', transportFor(snapshot.equippedTransport).name],
         ['Обувь', itemById(snapshot.equippedItems.SHOES)?.name || 'Нет'],
-        ['Сумка', itemById(snapshot.equippedItems.BAG)?.name || 'Нет'], ['Скорость', `${snapshot.movementSpeed} пикс./сек.`] ];
+        ['Сумка', itemById(snapshot.equippedItems.BAG)?.name || 'Нет'], ['Скорость', `${snapshot.movementSpeed} пикс./сек.`],
+        ['Следующая цель', next ? `${next.name} — ${next.purchasePrice} ₽ · уровень ${next.requiredLevel}` : 'Весь транспорт куплен'] ];
       const details = document.querySelector('#profile-details');
       details.replaceChildren();
       for (const [label, value] of rows) {

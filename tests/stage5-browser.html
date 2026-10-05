@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Stage 5 browser verification</title>
+<style>body{margin:0;background:#182b29;color:#eef4e7;font:14px Arial}header{padding:12px;display:flex;gap:16px;align-items:center}button{padding:12px}iframe{border:0;width:100%;height:calc(100vh - 68px)}#result{white-space:pre-wrap}details{padding:12px}</style>
+<header><button id="run" disabled>Run Stage 5 browser checks</button><span id="result">Loading game…</span></header>
+<details><summary>Check results</summary><pre id="log"></pre></details>
+<iframe title="Courier Empire integration test" src="/"></iframe>
+<script type="module">
+if (import.meta.env.DEV) document.querySelector('iframe').addEventListener('load', () => {
+  const script = document.createElement('script'); script.type = 'module'; script.src = '/tests/stage5-browser.js';
+  document.querySelector('iframe').contentDocument.body.append(script);
+});
+</script></html>

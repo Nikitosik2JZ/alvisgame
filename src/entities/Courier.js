@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameState } from '../state/GameState.js';
+import { transportFor } from '../config/transportConfig.js';
 
 export class Courier extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -11,8 +12,9 @@ export class Courier extends Phaser.Physics.Arcade.Sprite {
     this.inputBlocked = false;
     this.unsubscribeState = gameState.subscribe(({ movementSpeed, transport }) => {
       this.speed = movementSpeed;
-      this.setTexture(transport === 'BICYCLE' ? 'courier-bicycle' : 'courier');
-      this.body.setSize(22, 24).setOffset(11, 10);
+      const visual = transportFor(transport).visual;
+      this.setTexture(visual.texture);
+      this.body.setSize(visual.bodyWidth, visual.bodyHeight).setOffset((visual.width - visual.bodyWidth) / 2, (visual.height - visual.bodyHeight) / 2);
     });
     this.direction = new Phaser.Math.Vector2();
     this.keys = scene.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT');

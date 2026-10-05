@@ -1,6 +1,7 @@
 import { BALANCE, xpForLevel } from '../config/gameBalance.js';
 import { ORDER_STATUS } from '../managers/OrderManager.js';
 import { ORDER_TYPES } from '../config/economyConfig.js';
+import { transportFor } from '../config/transportConfig.js';
 
 export class OrderUI {
   constructor(scene, manager, state, player) {
@@ -42,7 +43,7 @@ export class OrderUI {
     if (available) {
       this.objective.textContent = `НОВЫЙ ЗАКАЗ · ${typeLabel}`;
       document.querySelector('#offer-restaurant').textContent = order.restaurant.name;
-      document.querySelector('#offer-details').textContent = `Доставка: ${order.distance} м · Оплата: ${order.reward} ₽ · Время: ${order.deliveryTime} сек.`;
+      document.querySelector('#offer-details').textContent = `Расстояние: ${order.distance} м · Оплата: ${order.reward} ₽ · Время: ${order.deliveryTime} сек.\n${order.requiredTransport ? 'Требуется' : 'Рекомендуемый транспорт'}: ${transportFor(order.requiredTransport || order.recommendedTransport).name}`;
     } else if (managerIsActive(order)) {
       this.objective.textContent = order.status === ORDER_STATUS.ACCEPTED
         ? `${typeLabel}${progress} · Заберите заказ в ${order.restaurant.name}` : `${typeLabel}${progress} · Доставьте заказ: ${order.customer.name}`;

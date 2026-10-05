@@ -2,6 +2,12 @@ import { EVENT_BALANCE as B } from '../config/eventBalance.js';
 const event = (id, title, description, category, rarity, trigger, possibleEffects, extra = {}) =>
   ({ id, title, description, category, rarity, trigger, weight: 1, possibleEffects, ...extra });
 export const EVENTS = [
+  event('moped-fuel', 'БЕНЗИН НА НУЛЕ?', 'Лампочка топлива выглядит подозрительно грустно.', 'NEGATIVE', 'COMMON', 'pickup', { time: B.mopedFuelTime }, { requirements: { transports: ['MOPED'] } }),
+  event('moped-route', 'Идеальный маршрут', 'Сегодня все светофоры будто работают на вас.', 'POSITIVE', 'COMMON', 'pickup', { speed: 'green' }, { requirements: { transports: ['MOPED'] } }),
+  event('traffic', 'ПРОБКА', 'Навигатор обещал 5 минут.\nНавигатор соврал.', 'NEGATIVE', 'UNCOMMON', 'pickup', { speed: 'traffic' }, { requirements: { transports: ['CAR'] } }),
+  event('parking', 'ПАРКОВКИ НЕТ', 'Свободное место существует только в легендах.', 'NEGATIVE', 'COMMON', 'customer', { time: B.parkingTime }, { requirements: { transports: ['CAR'] } }),
+  event('car-green', 'ЗЕЛЁНЫЙ КОРИДОР', 'Все перекрёстки открыты. Доставка летит по расписанию.', 'POSITIVE', 'COMMON', 'pickup', { speed: 'green' }, { requirements: { transports: ['CAR'] } }),
+  event('car-large', 'БОЛЬШОЙ ЗАКАЗ', 'Офис ищет курьера с автомобилем. Следующий заказ может стать крупным.', 'POSITIVE', 'UNCOMMON', 'customer', { largeOrderBoost: B.largeOrderBoost }, { requirements: { transports: ['CAR'] } }),
   event('cola', 'Где моя кола?!', 'Клиент уверен: кола исчезла по дороге. Поддержка изучает дело века.', 'NEGATIVE', 'VERY_RARE', 'customer', { dispute: true }),
   event('soup', 'Разлитый суп', 'Контейнер не пережил поездку. Пакет теперь немного аквариум.', 'NEGATIVE', 'COMMON', 'pickup', { payment: B.soupPayment }, { requirements: { food: true } }),
   event('entrance', 'Не тот подъезд', 'Навигатор привёл к соседнему дому. Он тоже красивый, но не тот.', 'NEGATIVE', 'COMMON', 'pickup', { time: B.wrongEntranceTime }, { requirements: { walkingRisk: true } }),

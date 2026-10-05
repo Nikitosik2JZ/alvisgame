@@ -2,6 +2,7 @@ import { BALANCE } from '../config/gameBalance.js';
 import { calculateDeliveryReward } from './DeliveryRewards.js';
 import { ORDER_TYPES, DISTRICTS, reputationTier } from '../config/economyConfig.js';
 import { EVENT_BALANCE } from '../config/eventBalance.js';
+import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
 
 export const ORDER_STATUS = Object.freeze({
   AVAILABLE: 'AVAILABLE', ACCEPTED: 'ACCEPTED', PICKED_UP: 'PICKED_UP', DELIVERED: 'DELIVERED', FAILED: 'FAILED',
@@ -20,6 +21,13 @@ export class OrderManager {
     this.sequence = 0;
     this.order = null;
     this.listeners = new Set();
+    state.isTransportLocked = () => Boolean(this.getTarget());
+    let previousTransport = state.getSnapshot().equippedTransport;
+    this.unsubscribeState = state.subscribe(snapshot => {
+      if (snapshot.equippedTransport === previousTransport) return;
+      previousTransport = snapshot.equippedTransport;
+      if (this.order?.status === ORDER_STATUS.AVAILABLE) { this.order = null; this.generate(); }
+    });
   }
 
   log(event, data = this.order) {
@@ -40,24 +48,35 @@ export class OrderManager {
     if (this.order && ![ORDER_STATUS.DELIVERED, ORDER_STATUS.FAILED].includes(this.order.status)) return false;
     const restaurant = this.restaurants[Math.floor(this.random() * this.restaurants.length)];
     const snapshot = this.state.getSnapshot();
+    const transport = transportFor(snapshot.equippedTransport);
     const district = DISTRICTS[snapshot.selectedDistrict || 'residential'];
     const candidates = [...this.customers].sort((a, b) => distance(restaurant, a) - distance(restaurant, b));
     const nearby = this.state.nextCloseOrder;
-    const pool = nearby ? candidates.slice(0, 1) : candidates.slice(0, Math.max(1, Math.ceil(candidates.length * district.customerPoolFraction)));
-    const customer = pool[Math.floor(this.random() * pool.length)];
-    const types = Object.entries(ORDER_TYPES).filter(([, config]) => snapshot.level >= config.level);
-    const weights = types.map(([id, config]) => config.weight * (id === 'URGENT' ? district.urgent : 1) * (id !== 'STANDARD' ? reputationTier(snapshot.reputation).betterOrders : 1));
+    const customerRoll = this.random();
+    const types = Object.entries(ORDER_TYPES).filter(([id, config]) => snapshot.level >= config.level && transport.allowedOrderTypes.includes(id)
+      && (!config.requiredTransport || config.requiredTransport === transport.id));
+    const weights = types.map(([id]) => transport.orderWeights[id] * (id === 'URGENT' ? district.urgent : 1)
+      * (id !== 'STANDARD' ? reputationTier(snapshot.reputation).betterOrders : 1)
+      * (id === 'LARGE' && snapshot.largeOrderBoost ? snapshot.largeOrderBoost : 1));
     let roll = this.random() * weights.reduce((sum, value) => sum + value, 0);
     const type = types.find((entry, i) => (roll -= weights[i]) < 0)?.[0] || 'STANDARD';
     const config = ORDER_TYPES[type];
+    const start = nearby ? 0 : Math.floor(candidates.length * Math.max(transport.distancePool.start, config.distanceStart || 0));
+    const end = nearby ? 1 : Math.max(start + 1, Math.ceil(candidates.length * Math.min(1,
+      transport.distancePool.end + district.customerPoolFraction - DISTRICTS.residential.customerPoolFraction)));
+    const pool = candidates.slice(start, end);
+    const customer = pool[Math.floor(customerRoll * pool.length)];
     const stops = [customer];
     if (type === 'DOUBLE') {
-      const others = this.customers.filter(c => c.id !== customer.id);
+      const others = pool.filter(c => c.id !== customer.id);
+      if (!others.length) others.push(...candidates.filter(c => c.id !== customer.id).slice(0, 1));
       stops.push(others[Math.floor(this.random() * others.length)]);
     }
     const meters = Math.round((distance(restaurant, customer) + (stops[1] ? distance(customer, stops[1]) : 0)) * BALANCE.metersPerPixel);
     this.order = {
       id: `order-${++this.sequence}`, restaurant, customer, customers: stops, deliveredCount: 0, type, district: snapshot.selectedDistrict, distance: meters,
+      requiredTransport: config.requiredTransport || null,
+      recommendedTransport: config.requiredTransport || TRANSPORTS.find(t => t.allowedOrderTypes.includes(type) && t.distancePool.end >= transport.distancePool.end)?.id || transport.id,
       reward: Math.round(clamp(Math.round(BALANCE.baseReward + meters * BALANCE.moneyPerMeter), BALANCE.minReward, BALANCE.maxReward) * config.money * district.money * (nearby ? EVENT_BALANCE.closeOrderMoney : 1)),
       xpReward: Math.round(clamp(Math.round(BALANCE.baseXP + meters * BALANCE.xpPerMeter), BALANCE.baseXP, BALANCE.maxXP) * config.xp * district.xp),
       reputationReward: clamp(1 + Math.floor(meters / BALANCE.metersPerReputation), 1, BALANCE.maxReputation) + config.reputation,
@@ -65,12 +84,17 @@ export class OrderManager {
       status: ORDER_STATUS.AVAILABLE,
     };
     this.state.nextCloseOrder = false;
+    if (transport.id === 'CAR' && snapshot.largeOrderBoost) this.state.setLargeOrderBoost(0);
     this.emit('generated');
     return true;
   }
 
   accept() {
     if (this.order?.status !== ORDER_STATUS.AVAILABLE) return false;
+    const transport = transportFor(this.state.getSnapshot().equippedTransport);
+    if (!transport.allowedOrderTypes.includes(this.order.type) || (this.order.requiredTransport && this.order.requiredTransport !== transport.id)) {
+      this.order = null; this.generate(); return false;
+    }
     this.order.status = ORDER_STATUS.ACCEPTED;
     this.order.deadline = this.now() + this.order.deliveryTime * 1000;
     this.events?.prepare();
@@ -140,4 +164,6 @@ export class OrderManager {
     }
     if (!this.events?.active && [ORDER_STATUS.DELIVERED, ORDER_STATUS.FAILED].includes(this.order?.status) && this.now() >= this.nextOrderAt) this.generate();
   }
+
+  destroy() { this.unsubscribeState(); this.state.isTransportLocked = null; }
 }

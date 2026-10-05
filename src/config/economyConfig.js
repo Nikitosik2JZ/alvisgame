@@ -9,6 +9,22 @@ export const ECONOMY = Object.freeze({
   goodShoesBonus: 0.10,
   thermobagBonus: 0.10,
   bicycleLevel: 3,
+  mopedPrice: 9000,
+  mopedLevel: 6,
+  mopedSpeed: 340,
+  carPrice: 28000,
+  carLevel: 10,
+  carSpeed: 420,
+  transportOrderWeights: {
+    WALKING: { STANDARD: 65, URGENT: 20, FRAGILE: 10 },
+    BICYCLE: { STANDARD: 55, URGENT: 23, FRAGILE: 12, DOUBLE: 10 },
+    MOPED: { STANDARD: 40, URGENT: 35, FRAGILE: 10, DOUBLE: 15 },
+    CAR: { STANDARD: 25, URGENT: 30, FRAGILE: 10, DOUBLE: 15, LARGE: 20 },
+  },
+  transportDistancePools: {
+    WALKING: { start: 0, end: .67 }, BICYCLE: { start: 0, end: .85 },
+    MOPED: { start: .2, end: 1 }, CAR: { start: .4, end: 1 },
+  },
   metersPerPixel: 0.4,
   interactionRadius: 60,
   nextOrderDelay: 3000,
@@ -32,6 +48,7 @@ export const ORDER_TYPES = {
   URGENT: { name: 'СРОЧНЫЙ', weight: 20, level: 1, money: 1.35, xp: 1.25, reputation: 1, timer: .75 },
   FRAGILE: { name: 'ХРУПКИЙ', weight: 10, level: 1, money: 1.2, xp: 1, reputation: 0, timer: 1 },
   DOUBLE: { name: 'ДВОЙНОЙ ЗАКАЗ', weight: 5, level: 3, money: 1.85, xp: 1.6, reputation: 1, timer: 1.5 },
+  LARGE: { name: 'КРУПНЫЙ ЗАКАЗ', weight: 20, level: 10, money: 2.3, xp: 2, reputation: 2, timer: 1.8, requiredTransport: 'CAR', distanceStart: .6 },
 };
 export const DISTRICTS = {
   residential: { name: 'Спальный район', level: 1, cost: 0, money: 1, xp: 1, event: 1, urgent: 1, customerPoolFraction: .67 },

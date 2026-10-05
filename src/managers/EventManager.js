@@ -2,6 +2,10 @@ import { EVENTS } from '../data/events.js';
 import { EVENT_BALANCE as B } from '../config/eventBalance.js';
 import { DISTRICTS, reputationTier } from '../config/economyConfig.js';
 import { TemporaryModifiers } from './TemporaryModifiers.js';
+import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
+
+export const fragileDamageRisk = s => Math.max(B.fragileMinimumRisk,
+  B.fragileDamageRisk * transportFor(s.equippedTransport).fragileModifier * (s.equippedItems.BAG === 'thermobag' ? B.bagRisk : 1));
 
 export class EventManager {
   constructor(state, orders, random = Math.random, now = () => performance.now()) {
@@ -14,6 +18,7 @@ export class EventManager {
   eligible(event, checkDeadline = true) {
     const s = this.state.getSnapshot(), r = event.requirements || {};
     return (!r.bicycle || s.transport === 'BICYCLE') && (!r.reputation || s.reputation >= r.reputation)
+      && (!r.transports || r.transports.includes(s.equippedTransport))
       && (!r.nearDeadline || !checkDeadline || this.orders.remainingSeconds() <= B.nearDeadline)
       && (this.negativeStreak < B.maxNegativeStreak || event.category === 'POSITIVE' || event.category === 'NEUTRAL')
       && (event.category !== 'NEGATIVE' || (this.negativeStreak < B.maxNegativeStreak
@@ -23,6 +28,8 @@ export class EventManager {
     const s = this.state.getSnapshot();
     const weights = pool.map(e => e.weight
       * (e.requirements?.food && s.equippedItems.BAG === 'thermobag' ? B.bagRisk : 1)
+      * (e.requirements?.food ? transportFor(s.equippedTransport).fragileModifier : 1)
+      * (transportFor(s.equippedTransport).eventModifiers[e.id]?.[s.selectedDistrict] || 1)
       * (e.requirements?.walkingRisk && s.transport === 'WALKING' && s.equippedItems.SHOES === 'good-shoes' ? B.shoesRisk : 1)
       * (e.category === 'POSITIVE' ? 1 + this.negativeStreak * B.positiveRecoveryWeight : 1));
     let roll = this.random() * weights.reduce((a, b) => a + b, 0);
@@ -44,9 +51,8 @@ export class EventManager {
     if (event) this.pending = null;
     if (!event && moment === 'customer' && this.orders.order.type === 'FRAGILE' && !this.orders.order.damageChecked) {
       this.orders.order.damageChecked = true;
-      const bag = this.state.getSnapshot().equippedItems.BAG === 'thermobag';
       const soup = EVENTS.find(e => e.id === 'soup');
-      if (this.random() < B.fragileDamageRisk * (bag ? B.bagRisk : 1) && this.eligible(soup) && this.lastId !== soup.id) event = soup;
+      if (this.random() < fragileDamageRisk(this.state.getSnapshot()) && this.eligible(soup) && this.lastId !== soup.id) event = soup;
     }
     if (!event || !this.eligible(event) || this.active || this.isBlocked?.()) { resume(); return false; }
     this.active = { event, resume, pausedAt: this.orders.now() }; this.onShow?.(event); return true;
@@ -99,11 +105,14 @@ export class EventManager {
     }
     if (effects.demand) { this.state.setDemand(effects.demand); if (order) order.skipDemand = true; lines.push(`СПРОС: +${B.demandBonus * 100}% на ${effects.demand} следующих успешных заказа`); }
     if (effects.closeOrder) { this.state.nextCloseOrder = true; lines.push(`СЛЕДУЮЩИЙ ЗАКАЗ: ближайший клиент · +${Math.round((B.closeOrderMoney-1)*100)}% оплаты`); }
+    if (effects.largeOrderBoost) { this.state.setLargeOrderBoost(effects.largeOrderBoost); lines.push('Следующий заказ на автомобиле: повышен шанс крупной доставки.'); }
     if (effects.speed) {
       const kind = effects.speed;
-      const value = kind === 'green' ? B.greenSpeed : kind === 'puncture' ? B.punctureSpeed : s.transport === 'BICYCLE' ? B.rainBicycle : B.rainWalking;
-      const duration = kind === 'green' ? B.greenDuration : kind === 'puncture' ? B.punctureDuration : B.rainDuration;
-      this.modifiers.add(event.id, value, duration, kind === 'puncture' ? 'BICYCLE' : null);
+      const settings = { green: [B.greenSpeed, B.greenDuration], puncture: [B.punctureSpeed, B.punctureDuration],
+        traffic: [B.trafficSpeed, B.trafficDuration], rain: [transportFor(s.equippedTransport).weatherModifier, B.rainDuration] };
+      const [value, duration] = settings[kind];
+      this.modifiers.add(event.id, value, duration, kind === 'rain' ? null : event.requirements?.transports || (kind === 'puncture' ? 'BICYCLE' : null),
+        kind === 'rain' ? Object.fromEntries(TRANSPORTS.map(t => [t.id, t.weatherModifier])) : null);
       lines.push(`СКОРОСТЬ: ${Math.round((value - 1) * 100)}% · ${duration} сек.`);
     }
     const bad = (effects.money || 0) < 0 || (effects.reputation || 0) < 0 || effects.time || effects.payment || (effects.speed && effects.speed !== 'green');

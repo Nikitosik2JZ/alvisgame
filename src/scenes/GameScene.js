@@ -13,6 +13,7 @@ import { setupDevelopmentCheats } from '../managers/DevelopmentCheats.js';
 import { EventManager } from '../managers/EventManager.js';
 import { EventUI } from '../ui/EventUI.js';
 import { DistrictUI } from '../ui/DistrictUI.js';
+import { GarageUI } from '../ui/GarageUI.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -28,6 +29,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true);
     createDeliveryLocations(this);
     this.orders = new OrderManager({ restaurants, customers, state: gameState, debug: import.meta.env.DEV });
+    this.events.once('shutdown', () => this.orders.destroy());
     if (this.deliveryEvents) {
       this.deliveryEvents.orders = this.orders; this.orders.events = this.deliveryEvents; this.deliveryEvents.pending = null;
     } else this.deliveryEvents = new EventManager(gameState, this.orders);
@@ -35,6 +37,7 @@ export class GameScene extends Phaser.Scene {
     this.orderUI = new OrderUI(this, this.orders, gameState, this.player);
     this.shop = new ShopManager(gameState);
     this.shopUI = new ShopUI(this, this.shop, gameState, this.player);
+    this.garageUI = new GarageUI(this, gameState, this.player);
     this.profileUI = new PlayerProfileUI(this, gameState, this.player, this.deliveryEvents);
     this.districtUI = new DistrictUI(this, gameState, this.player, this.orders, () => this.scene.restart());
     if (import.meta.env.DEV) setupDevelopmentCheats(this, gameState);
@@ -48,5 +51,6 @@ export class GameScene extends Phaser.Scene {
     this.orders.update();
     this.orderUI.update();
     this.objectiveMarker.update(time);
+    this.garageUI.update();
   }
 }

@@ -7,12 +7,18 @@ import { TemporaryModifiers } from '../src/managers/TemporaryModifiers.js';
 import { EVENTS } from '../src/data/events.js';
 import { ORDER_TYPES, reputationTier } from '../src/config/economyConfig.js';
 import { restaurants, customers } from '../src/world/deliveryLocations.js';
+import { xpForLevel } from '../src/config/gameBalance.js';
+import { transportFor } from '../src/config/transportConfig.js';
 
 function setup(type = 'STANDARD', district = 'residential') {
   let time = 0;
   const state = new GameState(); state.update({ xp: 450 });
+  if (type === 'DOUBLE' || type === 'LARGE') {
+    const transport = transportFor(type === 'LARGE' ? 'CAR' : 'BICYCLE');
+    state.update({ xp: xpForLevel(transport.requiredLevel), money: transport.purchasePrice }); state.purchaseTransport(transport.id);
+  }
   if (district === 'center') { state.update({ money: 3000 }); state.unlockDistrict('center'); state.selectDistrict('center'); }
-  const roll = { STANDARD: 0, URGENT: .7, FRAGILE: .9, DOUBLE: .99 }[type];
+  const roll = { STANDARD: 0, URGENT: .7, FRAGILE: .9, DOUBLE: .99, LARGE: .99 }[type];
   let calls = 0;
   const orders = new OrderManager({ state, restaurants, customers, now: () => time, random: () => ++calls === 3 ? roll : 0 });
   orders.generate();
@@ -25,7 +31,7 @@ const show = (events, id, choice = 0, resume = () => {}) => {
   const result = events.resolve(choice); events.finish(); return result;
 };
 
-test('all four order types preserve pickup, deadline and single final payment; double has two distinct stops', () => {
+test('all order types preserve pickup, deadline and single final payment; double has two distinct stops', () => {
   for (const type of Object.keys(ORDER_TYPES)) {
     const { state, orders } = setup(type);
     assert.equal(orders.order.type, type);
@@ -49,7 +55,7 @@ test('district purchase requires both level and money, costs once, and roundtrip
   state.selectDistrict('center'); state.setDemand(3);
   const saved = state.getSaveData(), restored = new GameState(); restored.loadSaveData(saved);
   assert.deepEqual(restored.getSaveData(), saved);
-  assert.equal(saved.version, 3); assert.equal('active' in saved, false);
+  assert.equal(saved.version, 4); assert.equal('active' in saved, false);
   restored.loadSaveData({ version: 2, money: 20, reputation: 50 });
   assert.equal(restored.getSnapshot().selectedDistrict, 'residential'); assert.equal(restored.getSnapshot().demandBonusOrders, 0);
   restored.loadSaveData({ unlockedDistricts: ['nonsense', 'toString', '__proto__'], selectedDistrict: 'center', demandBonusOrders: Infinity });
@@ -85,6 +91,7 @@ test('negative streak, cooldown, no-repeat, bicycle and equipment requirements',
   show(events, 'green');
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'cola')), true);
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'puncture')), false);
+  events.orders.order.status = 'DELIVERED'; // Vehicle changes now require finishing the active order.
   state.update({ money: 3500 }); state.purchaseItem('bicycle');
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'puncture')), true);
   events.lastId = 'green'; events.debug('POSITIVE'); assert.notEqual(events.active.event.id, 'green'); events.resolve(); events.finish();

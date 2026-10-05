@@ -21,8 +21,10 @@
       <nav class="hud-actions" aria-label="Прогресс курьера">
         <button id="open-shop">МАГАЗИН</button>
         <button id="open-profile">КУРЬЕР</button>
+        <button id="open-garage">ГАРАЖ</button>
       </nav>
-      <div id="bicycle-goal" class="progression-goal"></div>
+      <div id="current-transport" class="xp"></div>
+      <div id="transport-goal" class="progression-goal"></div>
     </header>
     <section id="order-panel" class="order-panel" aria-label="Текущий заказ">
       <strong id="objective" aria-live="polite"></strong>
@@ -59,9 +61,26 @@
       <div class="modal-content">
         <dl id="profile-details"></dl>
         <div class="transport-actions"><button id="equip-walking">ПЕШКОМ</button><button id="equip-bicycle" hidden>ВЕЛОСИПЕД</button></div>
+        <p class="modal-note">Все машины и смена транспорта — в ГАРАЖЕ.</p>
+        <p id="profile-feedback" role="status"></p>
         <p class="modal-note">Движение остановлено. Таймер заказа продолжает идти.</p>
       </div>
     </dialog>
+    <dialog id="garage-dialog" class="progression-dialog" aria-labelledby="garage-title">
+      <div class="modal-header"><h2 id="garage-title">ГАРАЖ</h2><button data-close aria-label="Закрыть гараж">ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content">
+        <p id="garage-money"></p>
+        <p id="garage-goal" class="goal-card"></p>
+        <p class="modal-note">Личный транспорт покупается навсегда. Смена бесплатна после завершения заказа. Таймер заказа продолжает идти.</p>
+        <p id="garage-feedback" role="status" aria-live="polite"></p>
+        <section id="transport-celebration" class="transport-celebration" hidden aria-labelledby="celebration-title">
+          <p>НОВЫЙ ТРАНСПОРТ!</p><h2 id="celebration-title"></h2><h3 id="celebration-transport"></h3>
+          <p id="celebration-text"></p><p>Теперь доставки станут значительно быстрее.</p><button id="celebration-go">ПОЕХАЛИ</button>
+        </section>
+        <div id="garage-items"></div>
+      </div>
+    </dialog>
+    <aside id="transport-milestone" role="status" aria-live="polite" hidden></aside>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
