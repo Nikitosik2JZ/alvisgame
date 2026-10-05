@@ -3,6 +3,7 @@ import { itemById } from '../data/shopItems.js';
 import { ModalUI } from './ModalUI.js';
 import { reputationTier, DISTRICTS } from '../config/economyConfig.js';
 import { transportFor, careerTitle, nextTransportGoal } from '../config/transportConfig.js';
+import { COMPANY } from '../config/companyConfig.js';
 
 export class PlayerProfileUI extends ModalUI {
   constructor(scene, state, player) {
@@ -18,7 +19,8 @@ export class PlayerProfileUI extends ModalUI {
         ['Выполнено заказов', snapshot.completedOrders], ['Провалено заказов', snapshot.failedOrders],
         ['Заработано всего', `${snapshot.totalMoneyEarned} ₽`], ['Чаевые', `${snapshot.totalTipsEarned} ₽`],
         ['Штрафы оплачены', `${snapshot.totalFinesPaid} ₽`], ['Доставлено', `${snapshot.totalDistanceDelivered} м`],
-        ['Следующая цель', next ? `${next.name} — ${next.purchasePrice} ₽ · уровень ${next.requiredLevel}` : 'Весь транспорт куплен'] ];
+        ['Компания', snapshot.companyUnlocked ? snapshot.companyName : 'Ещё не открыта'],
+        ['Следующая цель', next ? `${next.name} — ${next.purchasePrice} ₽ · уровень ${next.requiredLevel}` : snapshot.companyUnlocked ? 'Развивайте компанию' : `Своя компания — ${COMPANY.unlockPrice} ₽ · уровень ${COMPANY.unlockLevel}`] ];
       const details = document.querySelector('#profile-details');
       details.replaceChildren();
       for (const [label, value] of rows) {

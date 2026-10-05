@@ -16,6 +16,7 @@ import { DistrictUI } from '../ui/DistrictUI.js';
 import { GarageUI } from '../ui/GarageUI.js';
 import { HUDUI } from '../ui/HUDUI.js';
 import { EventHistoryUI } from '../ui/EventHistoryUI.js';
+import { CompanyUI } from '../ui/CompanyUI.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -43,6 +44,8 @@ export class GameScene extends Phaser.Scene {
     this.garageUI = new GarageUI(this, gameState, this.player);
     this.profileUI = new PlayerProfileUI(this, gameState, this.player);
     this.eventHistoryUI = new EventHistoryUI(this, this.player, this.deliveryEvents);
+    this.company = this.game.company;
+    this.companyUI = new CompanyUI(this, this.company, gameState, this.player);
     this.districtUI = new DistrictUI(this, gameState, this.player, this.orders, () => this.scene.restart());
     if (import.meta.env.DEV) setupDevelopmentCheats(this, gameState);
     this.objectiveMarker = new ObjectiveMarker(this, this.orders);
@@ -56,5 +59,6 @@ export class GameScene extends Phaser.Scene {
     this.orderUI.update();
     this.objectiveMarker.update(time);
     this.garageUI.update();
+    this.companyUI.update();
   }
 }

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { platformService } from '../services/PlatformService.js';
 import { gameState } from '../state/GameState.js';
 import { transportFor } from '../config/transportConfig.js';
+import { CompanyManager } from '../managers/CompanyManager.js';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -11,9 +12,11 @@ export class BootScene extends Phaser.Scene {
   async create() {
     await platformService.initialize();
     gameState.loadSaveData(await platformService.loadSave());
+    this.game.company = new CompanyManager(gameState);
+    this.game.company.start();
     // Persist progression through the existing local adapter. Active jobs/effects remain session-only.
     this.unsubscribeSave = gameState.subscribe(() => { platformService.save(gameState.getSaveData()); });
-    this.game.events.once('destroy', () => this.unsubscribeSave());
+    this.game.events.once('destroy', () => { this.game.company.destroy(); this.unsubscribeSave(); });
     // Original courier texture, drawn locally with Phaser shapes.
     const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0x172c2b, 0.22).fillEllipse(22, 27, 30, 18);

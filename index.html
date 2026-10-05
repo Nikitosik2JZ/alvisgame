@@ -29,6 +29,7 @@
         <button id="open-profile">КУРЬЕР<small>Статистика</small></button>
         <button id="open-garage">ГАРАЖ<small>Транспорт</small></button>
         <button id="open-events">СОБЫТИЯ<small>История</small></button>
+        <button id="open-company">КОМПАНИЯ<small>Свой бизнес</small></button>
       </nav>
       <div id="current-transport" class="xp"></div>
       <div id="transport-goal" class="progression-goal"></div>
@@ -90,6 +91,52 @@
           <p id="celebration-text"></p><p>Теперь доставки станут значительно быстрее.</p><button id="celebration-go">ПОЕХАЛИ</button>
         </section>
         <div id="garage-items"></div>
+      </div>
+    </dialog>
+    <dialog id="company-dialog" class="progression-dialog" aria-labelledby="company-title">
+      <div class="modal-header"><h2 id="company-title">КОМПАНИЯ</h2><button data-close aria-label="Закрыть компанию">ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content">
+        <p id="company-wallet"></p>
+        <p id="company-gameplay-note" class="modal-note">Личные доставки приносят активный доход. Курьеры компании — дополнительный пассивный доход. Таймер вашего заказа продолжает идти.</p>
+        <p id="company-feedback" role="status" aria-live="polite"></p>
+        <section id="company-offline" hidden>
+          <p class="eyebrow">ПОКА ВАС НЕ БЫЛО</p><h3>Курьеры продолжали работать</h3>
+          <p id="company-offline-earned"></p><p id="company-offline-limit" class="modal-note"></p>
+          <button id="company-offline-collect">ЗАБРАТЬ</button><button id="company-offline-later">ПОЗЖЕ</button>
+        </section>
+        <section id="company-celebration" hidden>
+          <p class="eyebrow">НОВЫЙ ЭТАП · СВОЯ КОМПАНИЯ</p><h3>Теперь у вас своя служба доставки</h3>
+          <p>Ещё недавно вы сами бегали с заказами. Теперь пора нанимать людей.</p>
+          <button id="company-begin">НАЧАТЬ БИЗНЕС</button>
+        </section>
+        <form id="company-name-form">
+          <label for="company-name">Название компании</label>
+          <div class="company-name-row"><input id="company-name" name="companyName" type="text" autocomplete="organization" enterkeyhint="done" /><button id="company-rename" type="submit" hidden>СОХРАНИТЬ</button></div>
+          <small id="company-name-hint"></small>
+        </form>
+        <section id="company-locked">
+          <h3>СВОЯ КОМПАНИЯ</h3><p id="company-requirements" class="goal-card"></p>
+          <button id="company-open">ОТКРЫТЬ КОМПАНИЮ</button>
+        </section>
+        <div id="company-business" hidden>
+          <nav class="company-tabs" aria-label="Управление компанией">
+            <button data-company-view="dashboard">ОБЗОР</button><button data-company-view="employees">КУРЬЕРЫ</button>
+            <button data-company-view="vehicles">ТРАНСПОРТ КОМПАНИИ</button><button data-company-view="upgrades">УЛУЧШЕНИЯ</button>
+          </nav>
+          <section data-company-panel="dashboard">
+            <h3 id="company-display-name"></h3><dl id="company-summary" class="company-summary"></dl>
+            <article class="shop-item company-balance"><h3>НАКОПЛЕНО <span id="company-balance"></span></h3><p id="company-storage"></p><button id="company-collect">ЗАБРАТЬ</button></article>
+            <h3>АКТИВНОСТЬ КОМПАНИИ</h3><ol id="company-log"></ol>
+          </section>
+          <section data-company-panel="employees" hidden>
+            <h3>КУРЬЕРЫ</h3><p id="company-capacity"></p><div id="company-employees" class="company-cards"></div>
+            <article class="shop-item"><h3>НАНЯТЬ КУРЬЕРА <span id="company-candidate"></span></h3>
+              <p id="company-candidate-details"></p><p id="company-hire-status" role="status"></p><button id="company-hire">НАНЯТЬ</button>
+            </article>
+          </section>
+          <section data-company-panel="vehicles" hidden><h3>ТРАНСПОРТ КОМПАНИИ</h3><p class="modal-note">Отдельный автопарк. Личный велосипед, мопед и автомобиль остаются в вашем гараже. Освободите транспорт у курьера, выбрав «Пешком», затем назначьте другому.</p><div id="company-vehicles" class="company-cards"></div></section>
+          <section data-company-panel="upgrades" hidden><h3>УЛУЧШЕНИЯ</h3><article class="shop-item"><h3 id="company-upgrade-title"></h3><p id="company-upgrade-details"></p><button id="company-upgrade">УЛУЧШИТЬ КОМПАНИЮ</button></article></section>
+        </div>
       </div>
     </dialog>
     <aside id="transport-milestone" role="status" aria-live="polite" hidden></aside>

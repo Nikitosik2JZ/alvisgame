@@ -3,6 +3,7 @@ import { CATEGORIES, itemById } from '../data/shopItems.js';
 import { DISTRICTS } from '../config/economyConfig.js';
 import { EVENT_BALANCE } from '../config/eventBalance.js';
 import { TRANSPORT, transportById, transportFor, TRANSPORTS } from '../config/transportConfig.js';
+import { initialCompanyState, loadCompanyState } from './companyState.js';
 
 const STAT_KEYS = ['completedOrders', 'failedOrders', 'totalMoneyEarned', 'totalTipsEarned', 'totalFinesPaid', 'totalDistanceDelivered'];
 
@@ -10,7 +11,7 @@ const initialState = () => ({ money: 0, level: 1, xp: 0, reputation: 0, movement
   unlockedDistricts: ['residential'], selectedDistrict: 'residential', demandBonusOrders: 0,
   transport: TRANSPORT.WALKING, equippedTransport: TRANSPORT.WALKING, ownedTransports: [TRANSPORT.WALKING], transportMilestones: [],
   largeOrderBoost: 0, ownedItems: [], equippedItems: { SHOES: null, BAG: null },
-  ...Object.fromEntries(STAT_KEYS.map(key => [key, 0])) });
+  ...Object.fromEntries(STAT_KEYS.map(key => [key, 0])), ...initialCompanyState() });
 
 // One owner for progression. Derived stats are recalculated, never trusted from saves.
 export class GameState {
@@ -18,7 +19,9 @@ export class GameState {
 
   getSnapshot() {
     return { ...this.values, unlockedDistricts: [...this.values.unlockedDistricts], ownedTransports: [...this.values.ownedTransports],
-      transportMilestones: [...this.values.transportMilestones], ownedItems: [...this.values.ownedItems], equippedItems: { ...this.values.equippedItems } };
+      transportMilestones: [...this.values.transportMilestones], ownedItems: [...this.values.ownedItems], equippedItems: { ...this.values.equippedItems },
+      employees: this.values.employees.map(e => ({ ...e })), companyVehicles: this.values.companyVehicles.map(v => ({ ...v })),
+      companyStats: { ...this.values.companyStats }, companyLog: [...this.values.companyLog] };
   }
 
   refresh() {
@@ -137,11 +140,12 @@ export class GameState {
     this.values.selectedDistrict = id; this.refresh(); return true;
   }
 
-  getSaveData() { return { version: 5, ...this.getSnapshot() }; }
+  getSaveData() { return { version: 6, ...this.getSnapshot() }; }
 
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
     this.values = initialState();
+    Object.assign(this.values, loadCompanyState(data));
     this.nextCloseOrder = false;
     if (Array.isArray(data.unlockedDistricts)) this.values.unlockedDistricts = [...new Set(['residential', ...data.unlockedDistricts.filter(id => typeof id === 'string' && Object.hasOwn(DISTRICTS, id))])];
     if (this.values.unlockedDistricts.includes(data.selectedDistrict)) this.values.selectedDistrict = data.selectedDistrict;

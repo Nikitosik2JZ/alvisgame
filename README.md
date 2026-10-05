@@ -62,7 +62,7 @@ tests/browser-check.cjs              Browser integration and responsive checks
 
 Order states: AVAILABLE → ACCEPTED → PICKED_UP → DELIVERED. ACCEPTED and PICKED_UP can transition to FAILED. Only one offer or active order exists. Restaurants reuse existing colored buildings and their static bodies; entrances and customers sit outside obstacles on walkable ground.
 
-`GameState.getSaveData()` returns version 5 with equipment/district fields, ownedTransports, equippedTransport, transportMilestones, largeOrderBoost and lifetime statistics. Equipment uses only SHOES/BAG; vehicles appear only in ownedTransports. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through the existing LOCAL PlatformService and saves progression changes automatically. Active orders and temporary effects remain session-only. See [STAGE5.md](STAGE5.md) for the schema and migration rules.
+`GameState.getSaveData()` returns version 6 with all version 5 personal fields plus separate company ownership, workforce, fleet, income ledger, statistics, activity log and update timestamp. Equipment uses only SHOES/BAG; personal vehicles appear only in ownedTransports. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through the existing LOCAL PlatformService and saves progression changes automatically. Active orders and temporary effects remain session-only. See [STAGE5.md](STAGE5.md) for personal migration rules and [STAGE6.md](STAGE6.md) for company persistence and offline income.
 
 ## Verification
 
@@ -74,7 +74,7 @@ Build and browser checks pass. Vite retains the existing Phaser bundle warning (
 
 ## Limits
 
-Placeholder city and customer circles, approximate distance, one order, no route planner. Transport includes walking, bicycle, moped and car. Local saves are automatic; active orders and temporary effects do not survive reload. No fuel resource, maintenance, realistic driving, businesses, employees, multiplayer, Yandex SDK, ads, leaderboards or monetization.
+Placeholder city and customer circles, approximate distance, one order, no route planner. Transport includes walking, bicycle, moped and car. Company workers generate mathematical income without physical routes. Local saves are automatic; active orders and temporary effects do not survive reload. No fuel resource, maintenance, realistic driving, advanced business simulation, multiplayer, Yandex SDK, ads, leaderboards or monetization.
 
 ## Stage 3: shop and equipment
 
@@ -107,7 +107,13 @@ See [STAGE4.md](STAGE4.md) for the historical Stage 4 implementation and balance
 
 ## Stage 5: garage and transport progression
 
-See [STAGE5.md](STAGE5.md) for current prices, speeds, order pools, transport events, weather, fragile protection, save migration, debug controls and verification. Open **ГАРАЖ** from the HUD to buy permanent vehicles or switch freely after completing an active order. The bicycle is available only in the garage, alongside walking, moped and car. Stage 6 is not implemented.
+See [STAGE5.md](STAGE5.md) for personal prices, speeds, order pools, transport events, weather, fragile protection, save migration, debug controls and verification. Open **ГАРАЖ** from the HUD to buy permanent personal vehicles or switch freely after completing an active order. The personal bicycle is available only in the garage, alongside walking, moped and car.
+
+## Stage 6: own delivery company
+
+See [STAGE6.md](STAGE6.md) for the complete company configuration, data model, income ledger, offline safety, debug controls and verification. Open **КОМПАНИЯ** from the HUD or secondary mobile menu at level 12 for 40,000 ₽. Hire generic named couriers for 2,500 ₽, buy a separate company bicycle (3,000 ₽) or moped (8,000 ₽), and assign free vehicles. Walking/bicycle/moped employees earn 100/180/300 ₽ per minute at 100% efficiency. Income waits in the company balance until collected; online storage and offline duration are limited to two hours. Levels 1/2/3 allow 2/4/6 couriers, with upgrades costing 15,000/40,000 ₽. Personal gameplay remains available.
+
+`npm test` covers company transactions, elapsed-time income, collection, caps, malformed saves and migration. `node tests/company-browser.cjs` verifies the full company loop on desktop and four mobile viewports (same environment options as the existing browser scripts). Development-only Alt+C/M/H/O open a test company, grant company credit, hire a test courier and simulate one hour offline. No Stage 7 systems are included.
 
 ## Mobile UX pass
 

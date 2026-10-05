@@ -1,5 +1,6 @@
 import { ECONOMY as E } from './economyConfig.js';
 import { EVENT_BALANCE as B } from './eventBalance.js';
+import { companyLevel } from './companyConfig.js';
 
 export const TRANSPORT = Object.freeze({ WALKING: 'WALKING', BICYCLE: 'BICYCLE', MOPED: 'MOPED', CAR: 'CAR' });
 const visual = (texture, width = 44, height = 44) => ({ texture, width, height, bodyWidth: 22, bodyHeight: 24 });
@@ -27,7 +28,8 @@ export const TRANSPORTS = Object.freeze([
 export const transportById = id => TRANSPORTS.find(t => t.id === id);
 export const transportFor = id => transportById(id) || TRANSPORTS[0];
 export const nextTransportGoal = player => TRANSPORTS[1 + Math.max(...player.ownedTransports.map(id => TRANSPORTS.findIndex(t => t.id === id)))];
-export const careerTitle = player => [...TRANSPORTS].reverse().find(t => player.ownedTransports.includes(t.id)).careerTitle;
+export const careerTitle = player => player.companyUnlocked ? companyLevel(player.companyLevel).careerTitle
+  : [...TRANSPORTS].reverse().find(t => player.ownedTransports.includes(t.id)).careerTitle;
 export const goalText = player => {
   const next = nextTransportGoal(player);
   return next ? `СЛЕДУЮЩАЯ ЦЕЛЬ · ${next.name}\nСтоимость: ${next.purchasePrice} ₽ · У вас: ${player.money} ₽ · Осталось: ${Math.max(0, next.purchasePrice - player.money)} ₽ · Уровень: ${player.level} / ${next.requiredLevel}`

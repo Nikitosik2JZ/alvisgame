@@ -126,3 +126,26 @@ body:has(dialog[open]) .interact { display: none; }
   .compact .order-panel[data-mode="offer"] { left: auto; width: min(360px, 46vw); bottom: calc(94px + env(safe-area-inset-bottom)); }
   .compact .touch-controls { width: 108px; }
 }
+
+/* Company uses the same focus-trapped, internally scrolling personal panels. */
+.company-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.company-tabs button { padding: 10px 8px; font-size: 12px; }
+.company-tabs button[aria-pressed="false"] { background: #ffffff12; color: #eef4e7; border-color: #ffffff30; }
+.company-summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; font-size: 13px; }
+.company-summary dt { color: #b5c4bd; }
+.company-summary dd { margin: 0; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.company-cards { display: grid; gap: 12px; margin-bottom: 12px; }
+#company-feedback { color: #ffe6a9; white-space: pre-line; }
+#company-requirements, #company-upgrade-details, #company-candidate-details { white-space: pre-line; }
+#company-name-form label, #company-employees label { display: block; font-size: 13px; color: #b5c4bd; margin-bottom: 8px; }
+.company-name-row { display: flex; gap: 8px; margin: 8px 0; }
+#company-name, #company-employees select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; color: #eef4e7; background: #263c38; border: 1px solid #627663; border-radius: 8px; font: inherit; font-size: 16px; }
+#company-name:focus, #company-employees select:focus { outline: 2px solid #87e4fa; }
+#company-name-hint { color: #b5c4bd; font-size: 11px; }
+#company-employees select { margin-top: 8px; }
+#company-celebration, #company-offline { padding: 20px 0; text-align: center; line-height: 1.6; }
+#company-celebration h3, #company-display-name { color: #c4df8c; overflow-wrap: anywhere; }
+#company-celebration button, #company-locked button { width: 100%; }
+#company-offline button { margin: 8px 4px; }
+#company-log { padding-left: 20px; color: #b5c4bd; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+#company-log li { margin-bottom: 6px; }

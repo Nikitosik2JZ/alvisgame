@@ -1,10 +1,27 @@
 import { xpForLevel } from '../config/gameBalance.js';
 import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
+import { COMPANY } from '../config/companyConfig.js';
 
 export function setupDevelopmentCheats(scene, state) {
   if (!import.meta.env.DEV) return;
   const handler = (event) => {
     if (event.repeat) return;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName)) return;
+    if (event.altKey && ['KeyC', 'KeyM', 'KeyH', 'KeyO'].includes(event.code)) {
+      event.preventDefault(); const company = scene.company;
+      if (event.code === 'KeyC') {
+        state.update({ xp: Math.max(state.values.xp, xpForLevel(COMPANY.unlockLevel)), money: Math.max(state.values.money, COMPANY.unlockPrice) });
+        company.openCompany(COMPANY.defaultName);
+      } else if (event.code === 'KeyM') {
+        if (state.values.companyUnlocked) { state.values.companyBalance += 10000; state.refresh(); }
+      } else if (event.code === 'KeyH') {
+        state.update({ money: state.values.money + COMPANY.hireCost }); company.hire();
+      } else {
+        company.tick(); state.values.lastCompanyUpdateTimestamp = Date.now() - 3600000; company.resumeOffline();
+        company.offlineNoticeShown = false; scene.companyUI.pendingOffline = company.offlineEarned > 0;
+      }
+      console.debug(`[Development] ${event.code}: company command`); return;
+    }
     if (['F4', 'F5', 'F6'].includes(event.code)) {
       event.preventDefault(); scene.deliveryEvents.debug({ F4: 'POSITIVE', F5: 'NEGATIVE', F6: 'CHOICE' }[event.code]); return;
     }

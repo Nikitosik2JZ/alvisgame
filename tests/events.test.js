@@ -55,7 +55,7 @@ test('district purchase requires both level and money, costs once, and roundtrip
   state.selectDistrict('center'); state.setDemand(3);
   const saved = state.getSaveData(), restored = new GameState(); restored.loadSaveData(saved);
   assert.deepEqual(restored.getSaveData(), saved);
-  assert.equal(saved.version, 5); assert.equal('active' in saved, false);
+  assert.equal(saved.version, 6); assert.equal('active' in saved, false);
   restored.loadSaveData({ version: 2, money: 20, reputation: 50 });
   assert.equal(restored.getSnapshot().selectedDistrict, 'residential'); assert.equal(restored.getSnapshot().demandBonusOrders, 0);
   restored.loadSaveData({ unlockedDistricts: ['nonsense', 'toString', '__proto__'], selectedDistrict: 'center', demandBonusOrders: Infinity });
