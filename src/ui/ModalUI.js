@@ -1,3 +1,4 @@
+import { lifecycle } from '../services/LifecycleManager.js';
 // Native dialog supplies focus trapping and blocks pointer input behind the panel.
 export class ModalUI {
   constructor(scene, player, dialogId, openerId) {
@@ -9,9 +10,7 @@ export class ModalUI {
     this.open = () => {
       if (document.querySelector('dialog[open]')) return;
       this.blocking = true;
-      player.inputBlocked = true;
-      player.clearInput();
-      scene.input.keyboard.enabled = false;
+      lifecycle.set(`MENU:${dialogId}`, true);
       this.dialog.showModal();
       document.querySelector('#interact').hidden = true;
       this.closeButton.focus();
@@ -23,9 +22,7 @@ export class ModalUI {
     this.onClose = () => {
       if (!this.blocking || this.dialog.open) return;
       this.blocking = false;
-      player.clearInput();
-      player.inputBlocked = false;
-      scene.input.keyboard.enabled = true;
+      lifecycle.set(`MENU:${dialogId}`, false);
       this.opener.focus();
     };
     this.onCancel = event => { event.preventDefault(); this.close(); };

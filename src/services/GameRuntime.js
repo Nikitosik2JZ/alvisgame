@@ -1,0 +1,51 @@
+import { platformService as platform } from './PlatformService.js';
+import { lifecycle } from './LifecycleManager.js';
+import { localization } from './LocalizationService.js';
+import { SaveManager } from './SaveManager.js';
+import { LeaderboardManager } from './LeaderboardManager.js';
+import { AdManager } from '../managers/AdManager.js';
+import { gameState } from '../state/GameState.js';
+
+export const saves = new SaveManager(gameState, platform);
+export const ads = new AdManager(gameState, platform, lifecycle, saves);
+lifecycle.platform = platform;
+platform.on('pause', () => { saves.interrupt(); lifecycle.set('PLATFORM', true); });
+platform.on('resume', () => lifecycle.set('PLATFORM', false));
+platform.on('accountOpen', () => { saves.suspend('ACCOUNT'); lifecycle.set('AUTH:ACCOUNT', true); });
+platform.on('accountClose', () => saves.switchAccount());
+
+export async function initializeRuntime() {
+  try { saves.accountReload = sessionStorage.getItem('courier-account-reload') === '1'; sessionStorage.removeItem('courier-account-reload'); } catch { /* Optional guard. */ }
+  await platform.initialize();
+  localization.initialize(platform.getLanguage());
+  const result = await saves.initialize();
+  document.querySelector('.local-badge').textContent = platform.mode;
+  document.querySelector('#loading').textContent = localization.t('loading');
+  return result;
+}
+
+export function bindBrowserLifecycle() {
+  const visibility = () => {
+    if (document.hidden) saves.interrupt();
+    lifecycle.set('VISIBILITY:HIDDEN', document.hidden);
+  };
+  document.addEventListener('visibilitychange', visibility);
+  window.addEventListener('blur', () => { saves.interrupt(); lifecycle.set('VISIBILITY:BLUR', true); });
+  window.addEventListener('focus', () => { lifecycle.set('VISIBILITY:BLUR', false); visibility(); });
+  window.addEventListener('pagehide', () => { saves.interrupt(); lifecycle.set('VISIBILITY:PAGE', true); });
+  window.addEventListener('pageshow', () => lifecycle.set('VISIBILITY:PAGE', false));
+  document.addEventListener('contextmenu', event => event.preventDefault());
+  visibility();
+}
+
+let leaderboard;
+export function finishLoading(game) {
+  if (platform.ready) return;
+  // After scene creation and the first rendered frame, remove the blocking overlay.
+  game.events.once('postrender', () => {
+    document.querySelector('#loading').remove();
+    platform.gameReady(); lifecycle.set('BOOT', false);
+    leaderboard = new LeaderboardManager(gameState, platform, saves);
+  });
+}
+export function destroyRuntime() { saves.destroy(); leaderboard?.destroy(); }

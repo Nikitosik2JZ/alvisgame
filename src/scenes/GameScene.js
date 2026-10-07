@@ -21,6 +21,9 @@ import { CompanyUI } from '../ui/CompanyUI.js';
 import { CompanyEventUI } from '../ui/CompanyEventUI.js';
 import { ProgressUI } from '../ui/ProgressUI.js';
 import { TasksUI } from '../ui/TasksUI.js';
+import { LeaderboardUI } from '../ui/LeaderboardUI.js';
+import { lifecycle } from '../services/LifecycleManager.js';
+import { finishLoading } from '../services/GameRuntime.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -32,6 +35,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WORLD.width, WORLD.height);
     this.buildings = createCity(this);
     this.player = new Courier(this, WORLD.spawn.x, WORLD.spawn.y);
+    lifecycle.bindScene(this);
     this.hudUI = new HUDUI(this, this.player);
     this.physics.add.collider(this.player, this.buildings);
     this.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
@@ -39,11 +43,11 @@ export class GameScene extends Phaser.Scene {
     const locations = districtDeliveryLocations(gameState.getSnapshot().selectedDistrict);
     const { restaurants, customers } = locations;
     createDeliveryLocations(this, locations);
-    this.orders = new OrderManager({ restaurants, customers, state: gameState, debug: import.meta.env.DEV });
+    this.orders = new OrderManager({ restaurants, customers, state: gameState, now: lifecycle.now, debug: import.meta.env.DEV });
     this.events.once('shutdown', () => this.orders.destroy());
     if (this.deliveryEvents) {
       this.deliveryEvents.orders = this.orders; this.orders.events = this.deliveryEvents; this.deliveryEvents.pending = null;
-    } else this.deliveryEvents = new EventManager(gameState, this.orders);
+    } else this.deliveryEvents = new EventManager(gameState, this.orders, Math.random, lifecycle.now);
     this.eventUI = new EventUI(this, this.player, this.deliveryEvents);
     this.orderUI = new OrderUI(this, this.orders, gameState, this.player);
     this.shop = new ShopManager(gameState);
@@ -57,15 +61,18 @@ export class GameScene extends Phaser.Scene {
     this.districtUI = new DistrictUI(this, gameState, this.player, this.orders, () => this.transitionDistrict());
     this.progressUI = new ProgressUI(this, gameState, this.player);
     this.tasksUI = new TasksUI(this, gameState, this.player);
+    this.leaderboardUI = new LeaderboardUI(this, gameState, this.player);
     if (import.meta.env.DEV) setupDevelopmentCheats(this, gameState);
     this.objectiveMarker = new ObjectiveMarker(this, this.orders);
     this.orders.generate();
+    lifecycle.set('TRANSITION', false);
     this.cameras.main.fadeIn(DISTRICT_TRANSITION_MS);
+    finishLoading(this.game);
   }
 
   transitionDistrict() {
     this.districtTransition = true;
-    this.player.clearInput(); this.player.inputBlocked = true;
+    lifecycle.set('TRANSITION', true);
     this.deliveryEvents.modifiers.items.clear(); this.deliveryEvents.pending = null;
     gameState.nextCloseOrder = false;
     const notice = document.createElement('div'); notice.id = 'district-transition'; notice.setAttribute('role', 'status');
@@ -77,7 +84,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time) {
-    if (this.districtTransition) return;
+    if (this.districtTransition || lifecycle.paused) return;
     this.player.speedMultiplier = this.deliveryEvents.modifiers.speed(gameState.getSnapshot().transport);
     this.player.update();
     this.orders.update();

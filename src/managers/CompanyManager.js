@@ -6,7 +6,8 @@ import { progressionMultiplier } from './ProgressionModifiers.js';
 
 // The ledger is mathematical. No employee sprites, routes or per-frame payouts.
 export class CompanyManager {
-  constructor(state, { wallNow = Date.now, now = () => performance.now(), random = Math.random } = {}) {
+  constructor(state, { wallNow = Date.now, now = () => performance.now(), random = Math.random, lifecycle = null } = {}) {
+    this.lifecycle = lifecycle;
     this.state = state; this.wallNow = wallNow; this.now = now; this.random = random;
     this.lastTick = now(); this.offlineEarned = 0;
     state.beforeDistrictUnlock = () => this.tick();
@@ -131,6 +132,7 @@ export class CompanyManager {
     const s = this.state.values, timestamp = s.lastCompanyUpdateTimestamp, wall = this.wallNow();
     this.lastTick = this.now();
     if (!s.companyUnlocked) return 0;
+    if (!Number.isFinite(wall) || wall <= 0) return 0;
     const elapsed = Number.isSafeInteger(timestamp) && timestamp > 0 && timestamp <= wall
       ? Math.min(COMPANY.offlineCapMs, wall - timestamp) : 0;
     this.offlineEarned = this.accrue(elapsed, true);
@@ -146,9 +148,10 @@ export class CompanyManager {
     this.lastTick = current;
     if (!this.state.values.companyUnlocked) return 0;
     const earned = this.accrue(elapsed);
-    this.state.values.lastCompanyUpdateTimestamp = this.wallNow();
+    const wall = this.wallNow();
+    if (Number.isFinite(wall) && wall > 0) this.state.values.lastCompanyUpdateTimestamp = wall;
     this.events.advance(Math.min(elapsed, COMPANY.offlineCapMs));
-    this.state.refresh();
+    this.state.refresh({ minor: true });
     return earned;
   }
 
@@ -156,10 +159,16 @@ export class CompanyManager {
     if (this.timer) return;
     this.resumeOffline();
     this.hidden = document.visibilityState === 'hidden';
-    this.timer = setInterval(() => { if (!this.hidden) this.tick(); }, COMPANY.tickMs);
+    this.timer = setInterval(() => { if (!this.hidden && !this.lifecycle?.paused) this.tick(); }, COMPANY.tickMs);
     this.onHide = () => {
-      if (document.visibilityState === 'hidden') { this.tick(); this.hidden = true; }
-      else { this.hidden = false; this.resumeOffline(); }
+      if (document.visibilityState === 'hidden') {
+        this.tick(); this.hidden = true;
+        this.hiddenOfflineAllowed = !this.lifecycle || ![...this.lifecycle.reasons].some(r => !r.startsWith('VISIBILITY'));
+      } else {
+        this.hidden = false;
+        if (this.hiddenOfflineAllowed) this.resumeOffline();
+        else { this.lastTick = this.now(); const wall = this.wallNow(); if (wall) this.state.values.lastCompanyUpdateTimestamp = wall; }
+      }
     };
     this.onPageHide = () => { if (!this.hidden) this.tick(); };
     document.addEventListener('visibilitychange', this.onHide);

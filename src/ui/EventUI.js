@@ -1,3 +1,4 @@
+import { lifecycle } from '../services/LifecycleManager.js';
 export class EventUI {
   constructor(scene, player, manager) {
     this.dialog = document.createElement('dialog'); this.dialog.className = 'progression-dialog event-dialog'; this.dialog.id = 'event-dialog';
@@ -8,13 +9,12 @@ export class EventUI {
     const close = () => {
       if (!manager.active?.resolved) return;
       this.dialog.close();
-      player.clearInput(); player.inputBlocked = false; scene.input.keyboard.enabled = true;
-      manager.finish(); document.querySelector('#open-profile').focus();
+      manager.finish(); lifecycle.set('MENU:EVENT', false); document.querySelector('#open-profile').focus();
     };
     const button = (label, action) => { const node = document.createElement('button'); node.textContent = label; node.onclick = action; buttons.append(node); return node; };
     manager.isBlocked = () => Boolean(document.querySelector('dialog[open]'));
     manager.onShow = event => {
-      player.inputBlocked = true; player.clearInput(); scene.input.keyboard.enabled = false;
+      lifecycle.set('MENU:EVENT', true);
       this.dialog.querySelector('#event-title').textContent = event.title;
       this.dialog.querySelector('#event-description').textContent = event.description;
       const effects = this.dialog.querySelector('#event-effects'); effects.textContent = ''; buttons.replaceChildren();
@@ -24,6 +24,6 @@ export class EventUI {
       this.dialog.showModal(); buttons.firstElementChild.focus();
     };
     this.dialog.addEventListener('cancel', e => { e.preventDefault(); close(); });
-    scene.events.once('shutdown', () => { this.dialog.remove(); manager.onShow = null; });
+    scene.events.once('shutdown', () => { this.dialog.remove(); manager.onShow = null; lifecycle.set('MENU:EVENT', false); });
   }
 }

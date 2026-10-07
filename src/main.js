@@ -2,6 +2,11 @@ import Phaser from 'phaser';
 import './style.css';
 import { BootScene } from './scenes/BootScene.js';
 import { GameScene } from './scenes/GameScene.js';
+import { bindBrowserLifecycle } from './services/GameRuntime.js';
+export { lifecycle } from './services/LifecycleManager.js';
+export { platformService } from './services/PlatformService.js';
+
+bindBrowserLifecycle();
 
 // Compact objectives follow the actual HUD height, including safe areas.
 const hud = document.querySelector('.hud');

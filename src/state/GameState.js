@@ -18,6 +18,7 @@ const initialState = () => ({ money: 0, level: 1, xp: 0, reputation: 0, movement
   districtIntroductionsSeen: ['residential'], districtStats: Object.fromEntries(Object.keys(DISTRICTS).map(id => [id, emptyDistrictStats()])),
   transport: TRANSPORT.WALKING, equippedTransport: TRANSPORT.WALKING, ownedTransports: [TRANSPORT.WALKING], transportMilestones: [],
   largeOrderBoost: 0, ownedItems: [], equippedItems: { SHOES: null, BAG: null },
+  deliveryAdBonus: null,
   ...Object.fromEntries(STAT_KEYS.map(key => [key, 0])), ...initialCompanyState(), ...initialProgressionState(), ...initialTaskState() });
 
 // One owner for progression. Derived stats are recalculated, never trusted from saves.
@@ -25,7 +26,7 @@ export class GameState {
   constructor(options = {}) { this.values = initialState(); this.listeners = new Set(); this.tasks = new TaskManager(this, options.tasks); this.tasks.sync(); this.progression = new AchievementManager(this); this.progression.evaluate(true); }
 
   getSnapshot() {
-    return { ...this.values, dailyTasks: this.values.dailyTasks.map(t => structuredClone(t)), rotatingChallenge: this.values.rotatingChallenge ? structuredClone(this.values.rotatingChallenge) : null,
+    return { ...this.values, deliveryAdBonus: this.values.deliveryAdBonus ? { ...this.values.deliveryAdBonus } : null, dailyTasks: this.values.dailyTasks.map(t => structuredClone(t)), rotatingChallenge: this.values.rotatingChallenge ? structuredClone(this.values.rotatingChallenge) : null,
       unlockedDistricts: [...this.values.unlockedDistricts], ownedTransports: [...this.values.ownedTransports],
       districtIntroductionsSeen: [...this.values.districtIntroductionsSeen], districtStats: Object.fromEntries(Object.entries(this.values.districtStats).map(([id, stats]) => [id, { ...stats }])),
       transportMilestones: [...this.values.transportMilestones], ownedItems: [...this.values.ownedItems], equippedItems: { ...this.values.equippedItems },
@@ -39,7 +40,7 @@ export class GameState {
       personalRecords: { ...this.values.personalRecords }, companyRecords: { ...this.values.companyRecords } };
   }
 
-  refresh() {
+  refresh(options = {}) {
     this.values.level = levelForXP(this.values.xp);
     this.values.transport = this.values.equippedTransport;
     const transport = transportFor(this.values.transport);
@@ -47,7 +48,7 @@ export class GameState {
     this.values.movementSpeed = Math.round(transport.movementSpeed * (transport.id === TRANSPORT.WALKING ? 1 + (shoes?.walkingBonus || 0) : 1) * progressionMultiplier(this.values, 'speed'));
     this.tasks.sync();
     this.progression.evaluate(Boolean(this.loadingProgression));
-    for (const listener of this.listeners) listener(this.getSnapshot());
+    for (const listener of this.listeners) listener(this.getSnapshot(), options);
   }
 
   update(changes) {
@@ -187,11 +188,15 @@ export class GameState {
     this.values.districtIntroductionsSeen.push(id); this.refresh(); return true;
   }
 
-  getSaveData() { return { version: 10, ...this.getSnapshot() }; }
+  getSaveData() { return { version: 11, ...this.getSnapshot(), deliveryAdBonus: this.values.deliveryAdBonus ? { ...this.values.deliveryAdBonus } : null }; }
 
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
     this.values = initialState();
+    const bonus = data.deliveryAdBonus;
+    if (bonus && typeof bonus.id === 'string' && bonus.id.length <= 100 && Number.isSafeInteger(bonus.amount) && bonus.amount > 0) {
+      this.values.deliveryAdBonus = { id: bonus.id, amount: bonus.amount, attempted: bonus.attempted === true, claimed: bonus.claimed === true };
+    }
     Object.assign(this.values, loadCompanyState(data));
     Object.assign(this.values, loadProgressionState(data));
     Object.assign(this.values, loadTaskState(data));
@@ -233,4 +238,4 @@ export class GameState {
     return () => this.listeners.delete(listener);
   }
 }
-export const gameState = new GameState();
+export const gameState = new GameState({ tasks: { date: () => null } });

@@ -8,6 +8,7 @@
     <link rel="icon" href="data:," />
   </head>
   <body>
+    <div id="loading" role="status">Загрузка…</div>
     <main id="game" aria-label="Courier Empire city"></main>
     <header class="hud">
       <div class="hud-switches">
@@ -33,6 +34,7 @@
         <button id="open-company">КОМПАНИЯ<small>Свой бизнес</small></button>
         <button id="open-progress">ПРОГРЕСС<small>Карьера и наследие</small></button>
         <button id="open-tasks"><span>ЗАДАНИЯ</span><small>Цели и челленджи</small></button>
+        <button id="open-rating">РЕЙТИНГ<small>Счёт курьера</small></button>
       </nav>
       <div id="current-transport" class="xp"></div>
       <div id="transport-goal" class="progression-goal"></div>
@@ -51,6 +53,12 @@
       <div id="timer" hidden></div>
       <div id="active-order-details" hidden></div>
       <p id="result" role="status" hidden></p>
+      <div id="result-actions" hidden>
+        <p id="delivery-ad-bonus"></p>
+        <button id="rewarded-delivery">СМОТРЕТЬ РЕКЛАМУ</button>
+        <p id="ad-feedback" role="status" aria-live="polite"></p>
+        <button id="continue-delivery">ПРОДОЛЖИТЬ</button>
+      </div>
     </section>
     <button id="interact" class="interact" hidden>ЗАБРАТЬ ЗАКАЗ · E</button>
     <aside class="guide"><span class="status-dot"></span> Следуйте к маркеру заказа</aside>
@@ -60,12 +68,16 @@
       <div class="modal-header"><h2 id="menu-title">МЕНЮ</h2><button data-close>ЗАКРЫТЬ ×</button></div>
       <div class="modal-content" id="menu-actions"></div>
     </dialog>
+    <dialog id="rating-dialog" class="progression-dialog" aria-labelledby="rating-title">
+      <div class="modal-header"><h2 id="rating-title">РЕЙТИНГ</h2><button data-close>ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content" id="rating-content"></div>
+    </dialog>
     <dialog id="shop-dialog" class="progression-dialog" aria-labelledby="shop-title">
       <div class="modal-header"><h2 id="shop-title">МАГАЗИН</h2><button data-close aria-label="Закрыть магазин">ЗАКРЫТЬ ×</button></div>
       <div class="modal-content">
         <p id="shop-money"></p>
         <p class="modal-note">Обувь и сумки. Покупка и выбор транспорта — в ГАРАЖЕ.</p>
-        <p class="modal-note">Движение остановлено. Таймер заказа продолжает идти.</p>
+        <p class="modal-note">Движение остановлено. Доставка приостановлена, пока меню открыто.</p>
         <p id="shop-feedback" role="status" aria-live="polite"></p>
         <div id="shop-items"></div>
       </div>
@@ -75,7 +87,7 @@
       <div class="modal-content">
         <dl id="profile-details"></dl>
         <p class="modal-note">Экипировка — в МАГАЗИНЕ. Покупка и выбор транспорта — в ГАРАЖЕ.</p>
-        <p class="modal-note">Движение остановлено. Таймер заказа продолжает идти.</p>
+        <p class="modal-note">Движение остановлено. Доставка приостановлена, пока меню открыто.</p>
       </div>
     </dialog>
     <dialog id="event-history-dialog" class="progression-dialog" aria-labelledby="event-history-title">
@@ -87,7 +99,7 @@
       <div class="modal-content">
         <p id="garage-money"></p>
         <p id="garage-goal" class="goal-card"></p>
-        <p class="modal-note">Личный транспорт покупается навсегда. Смена бесплатна после завершения заказа. Таймер заказа продолжает идти.</p>
+        <p class="modal-note">Личный транспорт покупается навсегда. Смена бесплатна после завершения заказа. Доставка приостановлена, пока меню открыто.</p>
         <p id="garage-feedback" role="status" aria-live="polite"></p>
         <section id="transport-celebration" class="transport-celebration" hidden aria-labelledby="celebration-title">
           <p>НОВЫЙ ТРАНСПОРТ!</p><h2 id="celebration-title"></h2><h3 id="celebration-transport"></h3>
@@ -100,7 +112,7 @@
       <div class="modal-header"><h2 id="company-title">КОМПАНИЯ</h2><button data-close aria-label="Закрыть компанию">ЗАКРЫТЬ ×</button></div>
       <div class="modal-content">
         <p id="company-wallet"></p>
-        <p id="company-gameplay-note" class="modal-note">Личные доставки приносят активный доход. Курьеры компании — дополнительный пассивный доход. Таймер вашего заказа продолжает идти.</p>
+        <p id="company-gameplay-note" class="modal-note">Личные доставки приносят активный доход. Курьеры компании — дополнительный пассивный доход. Доставка приостановлена, пока меню открыто.</p>
         <p id="company-feedback" role="status" aria-live="polite"></p>
         <section id="company-offline" hidden>
           <p class="eyebrow">ПОКА ВАС НЕ БЫЛО</p><h3>Курьеры продолжали работать</h3>

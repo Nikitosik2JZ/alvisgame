@@ -1,5 +1,38 @@
 # Courier Empire / Курьерская Империя
 
+## Stage 11: Yandex Games integration
+
+The existing gameplay and progression are preserved. Stage 11 adds SDK lifecycle, optional Yandex ID login, guest/authorized cloud saves, server-time daily systems, interstitial/rewarded ads and **РЕЙТИНГ**. Save version is now **11**. See [STAGE11.md](STAGE11.md) for architecture, score formula, audit, local verification and limitations; [YANDEX_RELEASE_CHECKLIST.md](YANDEX_RELEASE_CHECKLIST.md) covers manual Console/debug-panel work.
+
+Local development:
+
+```sh
+npm install
+npm run dev
+```
+
+Production build:
+
+```sh
+npm run build
+npm run preview
+npm test
+```
+
+The build uses relative asset paths and checks root `index.html`, ASCII/no-space filenames and the 100 MB size limit. Upload a ZIP of the **contents** of `dist`, not its parent directory. Do not bundle `/sdk.js`.
+
+**LOCAL mode:** loopback development/preview skips SDK loading; other development origins also remain local unless a real SDK is already supplied. SDK load/init failures fall back automatically. Russian, local device detection, `Date.now()` fallback, existing localStorage key, no-op ads/leaderboards and no login requirement. A single `[Platform] LOCAL mode` log is emitted per startup. Ads never grant mock money.
+
+**YANDEX mode:** production archive loading uses `/sdk.js`, then `YaGames.init()`. SDK methods live only in `PlatformService`. BootScene obtains Player, detects language, selects/migrates progress and starts company resources before GameScene becomes interactive. After the first scene render, the loading overlay is removed and `LoadingAPI.ready()` is called once. `LifecycleManager` drives idempotent GameplayAPI start/stop and freezes order/effect/company active clocks for menus, platform events, ads, authorization and visibility loss.
+
+`SaveManager` chooses valid cloud progress first; empty cloud permits a scoped local backup or a one-time migration from the original flat local save. Local storage remains a synchronous backup. Cloud data wraps the existing GameState serializer as `{saveVersion, revision, savedAt, gameState}` under `courierEmpire`. Writes debounce for 1.5 seconds, stay at least 5 seconds apart, and batch passive company changes for 30 seconds. Failed cloud reads block writes for that session. Account selection suspends synchronization and reloads with the newly acquired Player; previous-account data is never imported into a selected empty account.
+
+Fullscreen interstitials are considered only when **ПРОДОЛЖИТЬ** is pressed after a finished/failed order: four successful orders since the preceding request, 180 active seconds before the first request, and 180 active seconds between requests. There is no manual startup ad and no interval-driven advertising. Successful personal deliveries optionally offer **+50% of their final delivery payment**, rounded down, through **СМОТРЕТЬ РЕКЛАМУ**. Only `onRewarded` credits money, with no XP/reputation; one persisted attempt per result prevents duplicates. Continue is always available without watching an ad.
+
+The optional login explanation and deliberate confirmation are in **РЕЙТИНГ**. The technical leaderboard name is **`courier_score`**; create it manually in Yandex Console with descending numeric scores and zero decimals. Guest players see a local progression score. Score writes are throttled to 10 seconds and ranking reads are cached. Platform language genuinely initializes `LocalizationService`; supported/fallback language is **ru**. UTC daily boundaries and offline company timestamps use server time, with a monotonic server anchor during temporary failures. Offline income keeps the existing two-hour cap.
+
+Browser checks: `tests/stage11-browser.cjs`, `tests/stage10-browser.cjs` and `tests/mobile-ux-browser.cjs` use playwright-core plus Chrome (`PLAYWRIGHT_MODULE`, `CHROME_PATH`, `GAME_URL`, `PREVIEW_URL` configurable). `tests/platform.test.js` uses explicitly labelled SDK contract doubles, not a real Yandex session. Platform-specific acceptance still **REQUIRES YANDEX DEBUG ENVIRONMENT**.
+
 ## Stage 10: daily tasks, challenges and delivery streaks
 
 **ЗАДАНИЯ** is available through the existing secondary menu, with **ЕЖЕДНЕВНЫЕ**, **ЧЕЛЛЕНДЖИ**, **СЕРИЯ** tabs. Today's one-time bonus starts at level 1; three daily tasks unlock at level 2; one optional session challenge at level 3; one rotating challenge at level 5. There are 28 data-driven templates, filtered by actual unlocks, with three distinct daily categories. Missing days has no penalty. Delivery streaks preserve their best record and give capped one-order milestone bonuses (maximum 15%). Save version 10 migrates old saves without wiping progress.
@@ -30,11 +63,11 @@ Open the URL printed by Vite. The dev server supports phone testing over the sam
 - Within 60 pixels of the entrance, press **E** or **ЗАБРАТЬ ЗАКАЗ**.
 - Follow the blue customer marker. Press **E** or **ПЕРЕДАТЬ ЗАКАЗ** within its zone.
 - Success grants money, total XP and reputation once. Level-up appears in the result.
-- After 3 seconds a new offer appears and requires acceptance.
+- Press **ПРОДОЛЖИТЬ** on the result to receive the next offer, which requires acceptance.
 
-To test failure, accept an order and let its timer reach zero (60–120 seconds). Failure grants no money or XP and subtracts 2 reputation. Negative reputation is supported. After 3 seconds another offer appears. An expired order cannot be delivered on the expiry frame.
+To test failure, accept an order and let its active timer reach zero (60–120 seconds). Failure grants no money or XP and subtracts 2 reputation. Negative reputation is supported. Press Continue for another offer. An expired order cannot be delivered on the expiry frame.
 
-The timer starts at acceptance and continues during pickup. A monotonic wall-clock deadline continues while the tab is inactive; expiry is processed on resume. Movement stops on blur or visibility loss.
+The timer starts at acceptance and continues during pickup. Stage 11 uses a monotonic active-game clock: blocking menus, ads, authorization, platform pauses and focus/visibility loss freeze delivery time and reset movement input.
 
 ## Balance and progression
 
@@ -61,14 +94,14 @@ src/ui/OrderUI.js                   DOM HUD, offer, interaction, result, level-u
 src/ui/ObjectiveMarker.js           Pulsing ring and off-screen direction
 src/config/gameBalance.js           Economy, timing, interaction, levels
 src/state/GameState.js              Shared progression and serialization
-src/services/PlatformService.js     Existing LOCAL adapter
+src/services/PlatformService.js     LOCAL/YANDEX SDK adapter
 tests/orders.test.js                Lifecycle, failure, rewards, levels, saves
 tests/browser-check.cjs              Browser integration and responsive checks
 ```
 
 Order states: AVAILABLE → ACCEPTED → PICKED_UP → DELIVERED. ACCEPTED and PICKED_UP can transition to FAILED. Only one offer or active order exists. Restaurants reuse existing colored buildings and their static bodies; entrances and customers sit outside obstacles on walkable ground.
 
-`GameState.getSaveData()` returns version 8 with district introduction flags and district statistics plus all personal fields and company workforce, fleet, ledgers, statistics, office, upgrades, candidates, reputation and gameplay-time business effects. Equipment uses only SHOES/BAG; personal vehicles appear only in ownedTransports. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through the existing LOCAL PlatformService and saves progression changes automatically. Active personal orders/effects remain session-only; resolved business effects persist. See [STAGE5.md](STAGE5.md) for personal migration and [STAGE7.md](STAGE7.md) for company persistence and offline progression, including Stage 6 migration. See [STAGE8.md](STAGE8.md) for current city progression and save version 8.
+`GameState.getSaveData()` now returns version 11 with district introduction flags and district statistics plus all personal fields and company workforce, fleet, ledgers, statistics, office, upgrades, candidates, reputation and gameplay-time business effects. Equipment uses only SHOES/BAG; personal vehicles appear only in ownedTransports. Levels and speed are derived rather than trusted. Legacy bicycle saves migrate even when they only contain transport=BICYCLE. Unknown vehicles and invalid equipment are discarded. BootScene loads through PlatformService and SaveManager and saves progression changes automatically. Active personal orders/effects remain session-only; resolved business effects persist. See [STAGE5.md](STAGE5.md) for personal migration and [STAGE7.md](STAGE7.md) for company persistence and offline progression, including Stage 6 migration. See [STAGE8.md](STAGE8.md) for current city progression and save version 8.
 
 ## Verification
 
@@ -80,11 +113,11 @@ Build and browser checks pass. Vite retains the existing Phaser bundle warning (
 
 ## Limits
 
-Placeholder city and customer circles, approximate distance, one order, no route planner. Transport includes walking, bicycle, moped and car. Company workers generate mathematical income without physical routes. Local saves are automatic; active orders and temporary effects do not survive reload. No fuel resource, maintenance, realistic driving, advanced business simulation, multiplayer, Yandex SDK, ads, leaderboards or monetization.
+Placeholder city and customer circles, approximate distance, one order, no route planner. Transport includes walking, bicycle, moped and car. Company workers generate mathematical income without physical routes. Saves are automatic; active orders and temporary effects do not survive reload. Stage 11 integrates Yandex ads, cloud saves and leaderboards; actual platform verification remains manual. No fuel, maintenance, multiplayer, in-app purchases, premium currency, sticky banners or final audio package.
 
 ## Stage 3: shop and equipment
 
-Open **МАГАЗИН** for equipment, **ГАРАЖ** for transport, **КУРЬЕР** for read-only statistics, or **СОБЫТИЯ** for session event history. On mobile these screens open through the secondary menu. Panels block movement and delivery input; order deadlines continue. Close with the always visible **ЗАКРЫТЬ** button or Escape. The shop scrolls on short screens. HUD and garage show money remaining for the next transport.
+Open **МАГАЗИН** for equipment, **ГАРАЖ** for transport, **КУРЬЕР** for read-only statistics, or **СОБЫТИЯ** for session event history. On mobile these screens open through the secondary menu. Panels block movement and delivery input; Stage 11 also freezes order deadlines. Close with the always visible **ЗАКРЫТЬ** button or Escape. The shop scrolls on short screens. HUD and garage show money remaining for the next transport.
 
 | Item | Price | Requirement | Effect |
 | --- | --- | --- | --- |

@@ -77,7 +77,7 @@ const seed = { version: 9, money: 111111, xp: 6000, reputation: 100, completedOr
       await open('tasks'); assert.equal(await page.locator('[data-task-action="intro"]').count(), 0); await close('tasks');
       const claimedDate = restored.lastDailyBonusClaimDate; await page.evaluate(() => courierDebug.tasks.nextDay()); assert.notEqual((await snapshot()).dailyTaskDate, claimedDate);
       await open('tasks'); assert.equal(await page.locator('[data-task-action="bonus"]').isEnabled(), true); await page.click('[data-task-action="bonus"]'); await close('tasks');
-      const beforeFail = await snapshot(); await page.evaluate(() => { scene.orders.order = null; scene.orders.generate(); scene.orders.accept(); scene.deliveryEvents.pending = null; scene.orders.order.deadline = performance.now() - 1; scene.orders.update(); });
+      const beforeFail = await snapshot(); await page.evaluate(() => { scene.orders.order = null; scene.orders.generate(); scene.orders.accept(); scene.deliveryEvents.pending = null; scene.orders.order.deadline = scene.orders.now() - 1; scene.orders.update(); });
       const failed = await snapshot(); assert.equal(failed.currentDeliveryStreak, 0); assert.equal(failed.bestDeliveryStreak, 7); assert.equal(failed.failedOrders, beforeFail.failedOrders + 1);
       await open('progress'); await page.click('[data-progress-view="records"]'); assert.match(await page.locator('#progress-content').textContent(), /Лучшая серия доставок/); await close('progress');
       await open('company'); assert.match(await page.locator('#company-display-name').textContent(), /Старая компания/); await close('company');
@@ -93,7 +93,7 @@ const seed = { version: 9, money: 111111, xp: 6000, reputation: 100, completedOr
       const ready = async () => { await page.waitForSelector('#objective:not(:empty)'); if (await page.locator('#company-dialog[open]').count()) await page.click('#company-dialog [data-close]'); };
       const open = async () => { if (!await page.locator('#open-tasks').isVisible()) await page.click('#open-menu'); await page.click('#open-tasks'); };
       await page.goto(process.env.PREVIEW_URL); await ready(); assert.equal(await page.evaluate(() => typeof courierDebug), 'undefined'); await open(); await page.click('[data-task-action="intro"]'); await page.click('[data-task-action="bonus"]');
-      const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), key); assert.equal(saved.version, 10); assert.equal(saved.money, seed.money + 1500); assert.equal(saved.dailyTasks.length, 3);
+      const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), key); assert.equal(saved.version, 11); assert.equal(saved.money, seed.money + 1500); assert.equal(saved.dailyTasks.length, 3);
       await page.reload(); await ready(); await open(); assert.equal(await page.locator('[data-task-action="bonus"]').isDisabled(), true); assert.equal(await page.locator('[data-task-action="intro"]').count(), 0);
       await page.click('[data-task-view="challenges"]'); assert.ok(await page.locator('[data-task-action="accept-session"]').isVisible()); await page.click('[data-task-action="later-session"]');
       await page.screenshot({ path: path.join(artifacts, `${viewport.width}-production.png`) }); await page.close(); console.log(`PASS production ${viewport.width}x${viewport.height}: UI, migration, bonus persistence, session decline, debug excluded`);
