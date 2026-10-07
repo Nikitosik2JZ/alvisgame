@@ -2,6 +2,20 @@ import { EVENT_BALANCE as B } from '../config/eventBalance.js';
 const event = (id, title, description, category, rarity, trigger, possibleEffects, extra = {}) =>
   ({ id, title, description, category, rarity, trigger, weight: 1, possibleEffects, ...extra });
 export const EVENTS = [
+  event('yard-dog', 'Злая собака во дворе', 'Охранник двора весит три килограмма, но спорить с ним не хочется.', 'NEGATIVE', 'COMMON', 'pickup', { time: B.district.dogTime }, { requirements: { districts: ['residential'] } }),
+  event('street-closed', 'Перекрыли улицу', 'Асфальт ремонтируют именно там, где вам было удобно.', 'NEGATIVE', 'COMMON', 'pickup', { time: B.district.closedStreetTime }, { requirements: { districts: ['center'] } }),
+  event('industrial-security', 'Охрана не пускает', 'Пропуск на склад есть у супа. У курьера — пока нет.', 'CHOICE', 'COMMON', 'customer', {}, { requirements: { districts: ['industrial'] }, choices: [
+    { label: 'ПОЗВОНИТЬ КЛИЕНТУ', consequence: `−${B.district.securityCallTime} сек. · безопасно`, effects: { time: B.district.securityCallTime } },
+    { label: 'ОБЪЕХАТЬ', consequence: `−${B.district.securityDetourTime} сек. · без потери репутации`, effects: { time: B.district.securityDetourTime } },
+  ] }),
+  event('empty-roads', 'Пустые дороги', 'Все фуры на обеде. Дорога временно ваша.', 'POSITIVE', 'COMMON', 'pickup', { speed: 'green' }, { requirements: { districts: ['industrial'] } }),
+  event('elite-security', 'Охрана попросила подождать', 'Охрана проверяет список гостей. Возможно, вас уже знают.', 'NEUTRAL', 'COMMON', 'customer', { eliteSecurity: true }, { requirements: { districts: ['elite'] } }),
+  event('elite-tips', 'Щедрые чаевые', '«Спасибо! Вы спасли наш приём». Даже пакет почувствовал себя важным.', 'POSITIVE', 'COMMON', 'customer', { tips: B.district.eliteTips }, { requirements: { districts: ['elite'] } }),
+  event('business-pass', 'Пропуск не оформлен', 'Ресепшен ждёт заявку. Заявка ждёт согласование. Заказ ждёт вас.', 'CHOICE', 'COMMON', 'customer', {}, { requirements: { districts: ['business'] }, choices: [
+    { label: 'ПОДОЖДАТЬ', consequence: `−${B.district.businessWaitTime} сек. · безопасно`, effects: { time: B.district.businessWaitTime } },
+    { label: 'ПОЗВОНИТЬ КЛИЕНТУ', consequence: `${Math.round(B.district.businessCallSuccess * 100)}% сразу пройти · иначе −${B.district.businessCallTime} сек.`, effects: { businessCall: true } },
+  ] }),
+  event('corporate-bonus', 'Корпоративный бонус', 'Бухгалтерия согласовала доплату. Маленькое офисное чудо.', 'POSITIVE', 'UNCOMMON', 'customer', { moneyRange: B.district.corporateBonus }, { requirements: { districts: ['business'] } }),
   event('moped-fuel', 'БЕНЗИН НА НУЛЕ?', 'Лампочка топлива выглядит подозрительно грустно.', 'NEGATIVE', 'COMMON', 'pickup', { time: B.mopedFuelTime }, { requirements: { transports: ['MOPED'] } }),
   event('moped-route', 'Идеальный маршрут', 'Сегодня все светофоры будто работают на вас.', 'POSITIVE', 'COMMON', 'pickup', { speed: 'green' }, { requirements: { transports: ['MOPED'] } }),
   event('traffic', 'ПРОБКА', 'Навигатор обещал 5 минут.\nНавигатор соврал.', 'NEGATIVE', 'UNCOMMON', 'pickup', { speed: 'traffic' }, { requirements: { transports: ['CAR'] } }),

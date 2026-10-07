@@ -13,4 +13,9 @@ export const EVENT_BALANCE = {
   mopedFuelTime: 6, parkingTime: 8, trafficSpeed: .85, trafficDuration: 12,
   largeOrderBoost: 3,
   transportNoticeDuration: 8,
+  district: {
+    dogTime: 5, closedStreetTime: 7, securityCallTime: 8, securityDetourTime: 14,
+    eliteWaitTime: 8, eliteSkipReputation: 70, businessWaitTime: 12,
+    businessCallTime: 5, businessCallSuccess: .65, eliteTips: [250, 500], corporateBonus: [350, 650],
+  },
 };

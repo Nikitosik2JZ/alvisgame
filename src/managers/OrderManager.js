@@ -2,7 +2,8 @@ import { BALANCE } from '../config/gameBalance.js';
 import { calculateDeliveryReward } from './DeliveryRewards.js';
 import { ORDER_TYPES, DISTRICTS, reputationTier } from '../config/economyConfig.js';
 import { EVENT_BALANCE } from '../config/eventBalance.js';
-import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
+import { transportFor } from '../config/transportConfig.js';
+import { districtMastery, ELITE_ORDERS, eliteOrdersEligible } from '../config/districtConfig.js';
 
 export const ORDER_STATUS = Object.freeze({
   AVAILABLE: 'AVAILABLE', ACCEPTED: 'ACCEPTED', PICKED_UP: 'PICKED_UP', DELIVERED: 'DELIVERED', FAILED: 'FAILED',
@@ -22,6 +23,7 @@ export class OrderManager {
     this.order = null;
     this.listeners = new Set();
     state.isTransportLocked = () => Boolean(this.getTarget());
+    state.isDistrictLocked = () => Boolean(this.events?.active);
     let previousTransport = state.getSnapshot().equippedTransport;
     this.unsubscribeState = state.subscribe(snapshot => {
       if (snapshot.equippedTransport === previousTransport) return;
@@ -44,8 +46,9 @@ export class OrderManager {
     for (const listener of this.listeners) listener(event, this.order, extra);
   }
 
-  generate() {
+  generate({ forcedType, forcedVariant } = {}) {
     if (this.order && ![ORDER_STATUS.DELIVERED, ORDER_STATUS.FAILED].includes(this.order.status)) return false;
+    if (!this.restaurants.length || !this.customers.length) return false;
     const restaurant = this.restaurants[Math.floor(this.random() * this.restaurants.length)];
     const snapshot = this.state.getSnapshot();
     const transport = transportFor(snapshot.equippedTransport);
@@ -53,34 +56,54 @@ export class OrderManager {
     const candidates = [...this.customers].sort((a, b) => distance(restaurant, a) - distance(restaurant, b));
     const nearby = this.state.nextCloseOrder;
     const customerRoll = this.random();
-    const types = Object.entries(ORDER_TYPES).filter(([id, config]) => snapshot.level >= config.level && transport.allowedOrderTypes.includes(id)
+    const types = Object.entries(ORDER_TYPES).filter(([id, config]) => snapshot.level >= config.level && (id === 'ELITE' ? eliteOrdersEligible(snapshot) : transport.allowedOrderTypes.includes(id))
       && (!config.requiredTransport || config.requiredTransport === transport.id));
-    const weights = types.map(([id]) => transport.orderWeights[id] * (id === 'URGENT' ? district.urgent : 1)
+    if (forcedType && !types.some(([id]) => id === forcedType)) return false;
+    const weights = types.map(([id]) => (transport.orderWeights[id] || ORDER_TYPES[id].weight) * district.orderWeights[id]
       * (id !== 'STANDARD' ? reputationTier(snapshot.reputation).betterOrders : 1)
       * (id === 'LARGE' && snapshot.largeOrderBoost ? snapshot.largeOrderBoost : 1));
     let roll = this.random() * weights.reduce((sum, value) => sum + value, 0);
-    const type = types.find((entry, i) => (roll -= weights[i]) < 0)?.[0] || 'STANDARD';
+    const type = forcedType || types.find((entry, i) => (roll -= weights[i]) < 0)?.[0] || 'STANDARD';
     const config = ORDER_TYPES[type];
-    const start = nearby ? 0 : Math.floor(candidates.length * Math.max(transport.distancePool.start, config.distanceStart || 0));
-    const end = nearby ? 1 : Math.max(start + 1, Math.ceil(candidates.length * Math.min(1,
-      transport.distancePool.end + district.customerPoolFraction - DISTRICTS.residential.customerPoolFraction)));
-    const pool = candidates.slice(start, end);
+    let variant = null;
+    if (type === 'ELITE') {
+      const variants = ELITE_ORDERS.variants.filter(v => snapshot.reputation >= (v.minimumReputation || ELITE_ORDERS.reputation));
+      let variantRoll = this.random() * variants.reduce((sum, v) => sum + v.weight, 0);
+      variant = variants.find(v => v.id === forcedVariant) || variants.find(v => (variantRoll -= v.weight) < 0) || variants[0];
+    }
+    const [minMeters, singleMaxMeters] = district.routeRange;
+    const maxMeters = singleMaxMeters * (type === 'DOUBLE' ? district.doubleRouteMultiplier : 1);
+    let routes = candidates.filter(c => distance(restaurant, c) * BALANCE.metersPerPixel >= minMeters && distance(restaurant, c) * BALANCE.metersPerPixel <= singleMaxMeters);
+    // Sparse/custom layouts use the closest reachable endpoint rather than inventing coordinates.
+    if (!routes.length) routes = [...candidates].sort((a, b) => Math.abs(distance(restaurant, a) * BALANCE.metersPerPixel - minMeters) - Math.abs(distance(restaurant, b) * BALANCE.metersPerPixel - minMeters)).slice(0, 1);
+    if (type === 'DOUBLE') {
+      const pairs = routes.filter(c => candidates.some(other => other.id !== c.id && (distance(restaurant, c) + distance(c, other)) * BALANCE.metersPerPixel <= maxMeters));
+      if (pairs.length) routes = pairs;
+    }
+    if (!routes.length || !restaurant) return false;
+    const start = nearby ? 0 : Math.min(routes.length - 1, Math.floor(routes.length * Math.max(transport.distancePool.start, config.distanceStart || 0, variant?.distanceStart || 0)));
+    const end = nearby ? 1 : Math.max(start + 1, Math.ceil(routes.length * Math.min(1, transport.distancePool.end + district.transportPoolExtension)));
+    const pool = routes.slice(start, end);
     const customer = pool[Math.floor(customerRoll * pool.length)];
     const stops = [customer];
     if (type === 'DOUBLE') {
-      const others = pool.filter(c => c.id !== customer.id);
-      if (!others.length) others.push(...candidates.filter(c => c.id !== customer.id).slice(0, 1));
-      stops.push(others[Math.floor(this.random() * others.length)]);
+      let others = candidates.filter(c => c.id !== customer.id && (distance(restaurant, customer) + distance(customer, c)) * BALANCE.metersPerPixel <= maxMeters);
+      if (!others.length) others = candidates.filter(c => c.id !== customer.id).sort((a, b) => distance(customer, a) - distance(customer, b)).slice(0, 1);
+      if (others.length) stops.push(others[Math.floor(this.random() * others.length)]);
     }
     const meters = Math.round((distance(restaurant, customer) + (stops[1] ? distance(customer, stops[1]) : 0)) * BALANCE.metersPerPixel);
     this.order = {
       id: `order-${++this.sequence}`, restaurant, customer, customers: stops, deliveredCount: 0, type, district: snapshot.selectedDistrict, distance: meters,
+      variant: variant?.id || null, flavor: variant?.name || null, cargo: variant?.cargo || null,
+      tipMultiplier: variant?.tip || 1, eventMultiplier: type === 'ELITE' ? ELITE_ORDERS.event : 1,
+      masteryBonus: districtMastery(snapshot.districtStats?.[snapshot.selectedDistrict]?.completedOrders || 0).bonus,
+      failurePenalty: type === 'ELITE' ? ELITE_ORDERS.failurePenalty : BALANCE.failurePenalty * district.failureMultiplier,
       requiredTransport: config.requiredTransport || null,
-      recommendedTransport: config.requiredTransport || TRANSPORTS.find(t => t.allowedOrderTypes.includes(type) && t.distancePool.end >= transport.distancePool.end)?.id || transport.id,
-      reward: Math.round(clamp(Math.round(BALANCE.baseReward + meters * BALANCE.moneyPerMeter), BALANCE.minReward, BALANCE.maxReward) * config.money * district.money * (nearby ? EVENT_BALANCE.closeOrderMoney : 1)),
+      recommendedTransport: config.requiredTransport || variant?.recommendedTransport || district.recommendedTransports[0],
+      reward: Math.round(clamp(Math.round(BALANCE.baseReward + meters * BALANCE.moneyPerMeter), BALANCE.minReward, BALANCE.maxReward) * config.money * (variant?.money || 1) * district.money * (1 + districtMastery(snapshot.districtStats?.[snapshot.selectedDistrict]?.completedOrders || 0).bonus) * (nearby ? EVENT_BALANCE.closeOrderMoney : 1)),
       xpReward: Math.round(clamp(Math.round(BALANCE.baseXP + meters * BALANCE.xpPerMeter), BALANCE.baseXP, BALANCE.maxXP) * config.xp * district.xp),
-      reputationReward: clamp(1 + Math.floor(meters / BALANCE.metersPerReputation), 1, BALANCE.maxReputation) + config.reputation,
-      deliveryTime: Math.round(clamp(Math.round(BALANCE.minDeliveryTime + meters / BALANCE.metersPerTimerSecond), BALANCE.minDeliveryTime, BALANCE.maxDeliveryTime) * config.timer),
+      reputationReward: type === 'ELITE' ? clamp(variant.reputation, ...ELITE_ORDERS.reputationRange) : clamp(1 + Math.floor(meters / BALANCE.metersPerReputation), 1, BALANCE.maxReputation) + config.reputation + district.reputationBonus,
+      deliveryTime: Math.round(clamp(Math.round(BALANCE.minDeliveryTime + meters / BALANCE.metersPerTimerSecond), BALANCE.minDeliveryTime, BALANCE.maxDeliveryTime) * (variant?.timer || config.timer)),
       status: ORDER_STATUS.AVAILABLE,
     };
     this.state.nextCloseOrder = false;
@@ -91,8 +114,9 @@ export class OrderManager {
 
   accept() {
     if (this.order?.status !== ORDER_STATUS.AVAILABLE) return false;
-    const transport = transportFor(this.state.getSnapshot().equippedTransport);
-    if (!transport.allowedOrderTypes.includes(this.order.type) || (this.order.requiredTransport && this.order.requiredTransport !== transport.id)) {
+    const snapshot = this.state.getSnapshot(), transport = transportFor(snapshot.equippedTransport);
+    const eliteVariant = ELITE_ORDERS.variants.find(v => v.id === this.order.variant);
+    if (!(this.order.type === 'ELITE' ? eliteOrdersEligible(snapshot) && snapshot.reputation >= (eliteVariant?.minimumReputation || ELITE_ORDERS.reputation) : transport.allowedOrderTypes.includes(this.order.type)) || (this.order.requiredTransport && this.order.requiredTransport !== transport.id)) {
       this.order = null; this.generate(); return false;
     }
     this.order.status = ORDER_STATUS.ACCEPTED;
@@ -158,12 +182,12 @@ export class OrderManager {
     if (this.events?.active) return;
     if (this.getTarget() && this.now() >= this.order.deadline) {
       this.order.status = ORDER_STATUS.FAILED;
-      this.state.failOrder(BALANCE.failurePenalty);
+      this.state.failOrder(this.order.failurePenalty, this.order.district);
       this.nextOrderAt = this.now() + BALANCE.nextOrderDelay;
       this.emit('failed');
     }
     if (!this.events?.active && [ORDER_STATUS.DELIVERED, ORDER_STATUS.FAILED].includes(this.order?.status) && this.now() >= this.nextOrderAt) this.generate();
   }
 
-  destroy() { this.unsubscribeState(); this.state.isTransportLocked = null; }
+  destroy() { this.unsubscribeState(); this.state.isTransportLocked = null; this.state.isDistrictLocked = null; }
 }

@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { Courier } from '../entities/Courier.js';
 import { createCity, WORLD } from '../world/createCity.js';
 import { gameState } from '../state/GameState.js';
-import { createDeliveryLocations, restaurants, customers } from '../world/deliveryLocations.js';
+import { createDeliveryLocations, districtDeliveryLocations } from '../world/deliveryLocations.js';
+import { DISTRICT_TRANSITION_MS, DISTRICTS } from '../config/districtConfig.js';
 import { OrderManager } from '../managers/OrderManager.js';
 import { OrderUI } from '../ui/OrderUI.js';
 import { ObjectiveMarker } from '../ui/ObjectiveMarker.js';
@@ -25,6 +26,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.districtTransition = false;
     this.physics.world.setBounds(0, 0, WORLD.width, WORLD.height);
     this.buildings = createCity(this);
     this.player = new Courier(this, WORLD.spawn.x, WORLD.spawn.y);
@@ -32,7 +34,9 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.buildings);
     this.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
     this.cameras.main.startFollow(this.player, true);
-    createDeliveryLocations(this);
+    const locations = districtDeliveryLocations(gameState.getSnapshot().selectedDistrict);
+    const { restaurants, customers } = locations;
+    createDeliveryLocations(this, locations);
     this.orders = new OrderManager({ restaurants, customers, state: gameState, debug: import.meta.env.DEV });
     this.events.once('shutdown', () => this.orders.destroy());
     if (this.deliveryEvents) {
@@ -48,13 +52,28 @@ export class GameScene extends Phaser.Scene {
     this.company = this.game.company;
     this.companyUI = new CompanyUI(this, this.company, gameState, this.player);
     this.companyEventUI = new CompanyEventUI(this, this.player, this.company.events);
-    this.districtUI = new DistrictUI(this, gameState, this.player, this.orders, () => this.scene.restart());
+    this.districtUI = new DistrictUI(this, gameState, this.player, this.orders, () => this.transitionDistrict());
     if (import.meta.env.DEV) setupDevelopmentCheats(this, gameState);
     this.objectiveMarker = new ObjectiveMarker(this, this.orders);
     this.orders.generate();
+    this.cameras.main.fadeIn(DISTRICT_TRANSITION_MS);
+  }
+
+  transitionDistrict() {
+    this.districtTransition = true;
+    this.player.clearInput(); this.player.inputBlocked = true;
+    this.deliveryEvents.modifiers.items.clear(); this.deliveryEvents.pending = null;
+    gameState.nextCloseOrder = false;
+    const notice = document.createElement('div'); notice.id = 'district-transition'; notice.setAttribute('role', 'status');
+    notice.textContent = `${DISTRICTS[gameState.values.selectedDistrict].name.toUpperCase()}\nЗагрузка района…`;
+    document.body.append(notice);
+    this.events.once('shutdown', () => notice.remove());
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart());
+    this.cameras.main.fadeOut(DISTRICT_TRANSITION_MS);
   }
 
   update(time) {
+    if (this.districtTransition) return;
     this.player.speedMultiplier = this.deliveryEvents.modifiers.speed(gameState.getSnapshot().transport);
     this.player.update();
     this.orders.update();

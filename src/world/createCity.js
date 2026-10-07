@@ -1,20 +1,25 @@
 import { gameState } from '../state/GameState.js';
-import { restaurants } from './deliveryLocations.js';
-export const WORLD = { width: 2400, height: 2000, spawn: { x: 1200, y: 1000 } };
+import { districtDeliveryLocations } from './deliveryLocations.js';
+import { DISTRICTS } from '../config/districtConfig.js';
+import { districtLayout, WORLD } from './districtLayouts.js';
+export { WORLD } from './districtLayouts.js';
+
 
 export function createCity(scene) {
-  const center = gameState.getSnapshot().selectedDistrict === 'center';
+  const id = gameState.getSnapshot().selectedDistrict;
+  const district = DISTRICTS[id];
+  const layout = districtLayout(id);
+  const { restaurants } = districtDeliveryLocations(id);
   const art = scene.add.graphics();
   const buildings = scene.physics.add.staticGroup();
-  art.fillStyle(center ? 0x9b9da6 : 0x8ca77b).fillRect(0, 0, WORLD.width, WORLD.height);
+  art.fillStyle(district.visual.ground).fillRect(0, 0, WORLD.width, WORLD.height);
 
-  const streetsX = center ? [360, 1200, 2040, 1960] : [360, 1200, 2040];
-  const streetsY = center ? [320, 1000, 1680, 1800] : [320, 1000, 1680];
+  const { streetsX, streetsY } = layout;
   // Sidewalks surround the intersecting road grid.
-  art.fillStyle(0xd1ceba);
+  art.fillStyle(district.visual.sidewalk);
   for (const x of streetsX) art.fillRect(x - 88, 0, 176, WORLD.height);
   for (const y of streetsY) art.fillRect(0, y - 88, WORLD.width, 176);
-  art.fillStyle(0x596967);
+  art.fillStyle(district.visual.road);
   for (const x of streetsX) art.fillRect(x - 60, 0, 120, WORLD.height);
   for (const y of streetsY) art.fillRect(0, y - 60, WORLD.width, 120);
   art.fillStyle(0xabb4a0);
@@ -41,22 +46,8 @@ export function createCity(scene) {
     }
   }
 
-  const blocks = [
-    { x: 565, y: 505, w: 210, h: 240, color: 0xc28f73, name: 'MARKET' },
-    { x: 850, y: 505, w: 205, h: 240, color: 0xa8b9ad, name: 'APARTMENTS' },
-    { x: 565, y: 1160, w: 210, h: 280, color: 0xd5b679, name: 'BAKERY' },
-    { x: 850, y: 1160, w: 205, h: 280, color: 0x819eac, name: 'POST OFFICE' },
-    { x: 1365, y: 505, w: 245, h: 240, color: 0xb19bba, name: 'STUDIOS' },
-    { x: 1690, y: 505, w: 205, h: 240, color: 0xc28f73, name: 'CORNER SHOP' },
-    { x: 1690, y: 1160, w: 205, h: 280, color: 0xa8b9ad, name: 'APARTMENTS' },
-    { x: 75, y: 490, w: 150, h: 300, color: 0xb19bba, name: 'HOMES' },
-    { x: 75, y: 1150, w: 150, h: 310, color: 0xc28f73, name: 'HOMES' },
-    { x: 2170, y: 490, w: 150, h: 300, color: 0xd5b679, name: 'HOMES' },
-    { x: 2170, y: 1150, w: 150, h: 310, color: 0x819eac, name: 'HOMES' },
-  ];
-  if (center) blocks.push(...[250, 650, 1050, 1450, 1850].map((x, i) => ({ x, y: 100, w: 160, h: 110, color: i % 2 ? 0x7288ac : 0xaf8292, name: 'ОФИСЫ' })));
-  for (const block of blocks) {
-    if (center) block.color = 0x8996b4;
+  for (const block of layout.blocks) {
+    if (id !== 'residential') block.color = district.visual.building;
     const restaurant = restaurants.find((place) => place.building === block.name);
     if (restaurant) { block.name = restaurant.name; block.color = restaurant.color; }
     art.fillStyle(0x233e36, 0.18).fillRoundedRect(block.x + 8, block.y + 10, block.w, block.h, 4);
@@ -68,19 +59,29 @@ export function createCity(scene) {
     art.fillStyle(0xede4cc).fillRect(block.x + block.w / 2 - 18, block.y + block.h - 22, 36, 22);
     art.fillStyle(0x263c38, 0.22);
     for (let x = block.x + 28; x < block.x + block.w - 20; x += 42) art.fillRect(x, block.y + 35, 20, 25);
-    scene.add.text(block.x + block.w / 2, block.y + block.h / 2, block.name, {
+    scene.add.text(block.x + block.w / 2, block.y + block.h / 2, restaurant ? block.name : block.label || block.name, {
       fontFamily: 'Arial', fontSize: '12px', color: '#263e38', fontStyle: 'bold', letterSpacing: 1,
     }).setOrigin(0.5).setDepth(2);
   }
   // Small walkable park. Trees are decorative, buildings are the obstacles.
-  art.fillStyle(0x769569).fillRoundedRect(1365, 1160, 245, 280, 20);
+  art.fillStyle(district.visual.park).fillRoundedRect(1365, 1160, 245, 280, 20);
   art.fillStyle(0xc9c5a8).fillRect(1466, 1160, 38, 280);
-  for (const [x, y] of [[1400, 1205], [1572, 1215], [1400, 1360], [1572, 1370]]) {
+  const trees = layout.greenery === 'yard' ? [] : [[1400, 1205], [1572, 1215], [1400, 1360], [1572, 1370]];
+  if (layout.greenery === 'formal') trees.push([550, 850], [1100, 850], [1660, 850], [550, 1530], [1100, 1530], [1660, 1530]);
+  for (const [x, y] of trees) {
     art.fillStyle(0x233e36, 0.15).fillCircle(x + 5, y + 6, 23);
     art.fillStyle(0x496d52).fillCircle(x, y, 23);
     art.fillStyle(0x66875b).fillCircle(x - 5, y - 5, 16);
   }
-  scene.add.text(1485, 1465, center ? 'СКВЕР · ЦЕНТР' : 'СПАЛЬНЫЙ РАЙОН', { fontFamily: 'Arial', fontSize: '11px', color: '#344d3c' }).setOrigin(0.5);
+  scene.add.text(1485, 1465, district.name.toUpperCase(), { fontFamily: 'Arial', fontSize: '11px', color: '#344d3c' }).setOrigin(0.5);
+  if (id === 'industrial') {
+    art.lineStyle(3, 0xe4c064, .7);
+    for (let x = 1385; x < 1600; x += 40) art.strokeRect(x, 1190, 30, 210);
+  }
+  if (id === 'business') {
+    art.fillStyle(0xc0e3ef, .55);
+    for (const block of layout.blocks) for (let y = block.y + 28; y < block.y + block.h - 30; y += 32) art.fillRect(block.x + 15, y, block.w - 30, 10);
+  }
   // Keep painted roof detail above building rectangles.
   art.setDepth(1);
   return buildings;

@@ -1,3 +1,6 @@
+import { ELITE_ORDERS } from './districtConfig.js';
+export { DISTRICTS } from './districtConfig.js';
+
 export const ECONOMY = Object.freeze({
   walkingBaseSpeed: 160,
   bicycleSpeed: 250,
@@ -51,10 +54,7 @@ export const ORDER_TYPES = {
   FRAGILE: { name: 'ХРУПКИЙ', weight: 10, level: 1, money: 1.2, xp: 1, reputation: 0, timer: 1 },
   DOUBLE: { name: 'ДВОЙНОЙ ЗАКАЗ', weight: 5, level: 3, money: 1.85, xp: 1.6, reputation: 1, timer: 1.5 },
   LARGE: { name: 'КРУПНЫЙ ЗАКАЗ', weight: 20, level: 10, money: 2.3, xp: 2, reputation: 2, timer: 1.8, requiredTransport: 'CAR', distanceStart: .6 },
-};
-export const DISTRICTS = {
-  residential: { name: 'Спальный район', level: 1, cost: 0, money: 1, xp: 1, event: 1, urgent: 1, customerPoolFraction: .67 },
-  center: { name: 'Центр', level: 4, cost: 3000, money: 1.3, xp: 1.15, event: 1.15, urgent: 1.5, customerPoolFraction: 1 },
+  ELITE: { name: 'ЭЛИТНЫЙ ЗАКАЗ', weight: 1, level: ELITE_ORDERS.level, money: ELITE_ORDERS.money, xp: ELITE_ORDERS.xp, reputation: 0, timer: ELITE_ORDERS.timer },
 };
 export const REPUTATION_TIERS = [
   { min: 0, name: 'Новичок', dispute: .1, tips: 1, betterOrders: 1 },

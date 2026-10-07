@@ -1,6 +1,7 @@
 import { BALANCE, levelForXP } from '../config/gameBalance.js';
 import { CATEGORIES, itemById } from '../data/shopItems.js';
 import { DISTRICTS } from '../config/economyConfig.js';
+import { emptyDistrictStats } from '../config/districtConfig.js';
 import { EVENT_BALANCE } from '../config/eventBalance.js';
 import { TRANSPORT, transportById, transportFor, TRANSPORTS } from '../config/transportConfig.js';
 import { initialCompanyState, loadCompanyState } from './companyState.js';
@@ -9,6 +10,7 @@ const STAT_KEYS = ['completedOrders', 'failedOrders', 'totalMoneyEarned', 'total
 
 const initialState = () => ({ money: 0, level: 1, xp: 0, reputation: 0, movementSpeed: BALANCE.walkingBaseSpeed,
   unlockedDistricts: ['residential'], selectedDistrict: 'residential', demandBonusOrders: 0,
+  districtIntroductionsSeen: ['residential'], districtStats: Object.fromEntries(Object.keys(DISTRICTS).map(id => [id, emptyDistrictStats()])),
   transport: TRANSPORT.WALKING, equippedTransport: TRANSPORT.WALKING, ownedTransports: [TRANSPORT.WALKING], transportMilestones: [],
   largeOrderBoost: 0, ownedItems: [], equippedItems: { SHOES: null, BAG: null },
   ...Object.fromEntries(STAT_KEYS.map(key => [key, 0])), ...initialCompanyState() });
@@ -19,6 +21,7 @@ export class GameState {
 
   getSnapshot() {
     return { ...this.values, unlockedDistricts: [...this.values.unlockedDistricts], ownedTransports: [...this.values.ownedTransports],
+      districtIntroductionsSeen: [...this.values.districtIntroductionsSeen], districtStats: Object.fromEntries(Object.entries(this.values.districtStats).map(([id, stats]) => [id, { ...stats }])),
       transportMilestones: [...this.values.transportMilestones], ownedItems: [...this.values.ownedItems], equippedItems: { ...this.values.equippedItems },
       employees: this.values.employees.map(e => ({ ...e })), companyVehicles: this.values.companyVehicles.map(v => ({ ...v })),
       companyStats: { ...this.values.companyStats }, companyLog: [...this.values.companyLog],
@@ -44,15 +47,18 @@ export class GameState {
     this.refresh();
   }
 
-  addRewards({ reward, xpReward, reputationReward, distance = 0 }) {
+  addRewards({ reward, xpReward, reputationReward, distance = 0, district = this.values.selectedDistrict }) {
     this.values.completedOrders++;
     this.values.totalMoneyEarned += reward;
     this.values.totalDistanceDelivered += Math.max(0, Math.round(distance));
+    const stats = this.values.districtStats[district];
+    if (stats) { stats.completedOrders++; stats.totalEarned += reward; stats.bestDeliveryReward = Math.max(stats.bestDeliveryReward, reward); }
     this.update({ money: this.values.money + reward, xp: this.values.xp + xpReward, reputation: this.values.reputation + reputationReward });
   }
 
-  failOrder(penalty) {
+  failOrder(penalty, district = this.values.selectedDistrict) {
     this.values.failedOrders++;
+    if (this.values.districtStats[district]) this.values.districtStats[district].failedOrders++;
     this.update({ reputation: this.values.reputation - penalty });
   }
 
@@ -60,6 +66,7 @@ export class GameState {
     const actual = delta < 0 ? -Math.min(this.values.money, -delta) : delta;
     if (actual > 0) {
       this.values.totalMoneyEarned += actual;
+      this.values.districtStats[this.values.selectedDistrict].totalEarned += actual;
       if (tips) this.values.totalTipsEarned += actual;
     } else this.values.totalFinesPaid -= actual;
     this.update({ money: this.values.money + actual });
@@ -130,19 +137,41 @@ export class GameState {
     this.values.transportMilestones.push(id); this.refresh(); return true;
   }
 
-  unlockDistrict(id) {
+  districtUnlockError(id) {
     const district = Object.hasOwn(DISTRICTS, id) ? DISTRICTS[id] : null;
-    if (!district || this.values.unlockedDistricts.includes(id)) return false;
-    if (this.values.level < district.level || this.values.money < district.cost) return false;
+    if (!district) return 'Район не найден';
+    if (this.values.unlockedDistricts.includes(id)) return 'Район уже открыт';
+    if (this.values.level < district.level) return `Требуется уровень ${district.level}`;
+    if (district.reputation && this.values.reputation < district.reputation) return `Требуется репутация ${district.reputation}`;
+    if (district.requiredOwnedTransports && !district.requiredOwnedTransports.some(t => this.values.ownedTransports.includes(t))) return 'Купите мопед или автомобиль';
+    if (this.values.money < district.cost) return `Не хватает денег · ещё ${district.cost - this.values.money} ₽`;
+    return null;
+  }
+
+  unlockDistrict(id) {
+    if (this.districtUnlockError(id)) return false;
+    this.beforeDistrictUnlock?.();
+    const district = DISTRICTS[id];
     this.values.money -= district.cost; this.values.unlockedDistricts.push(id); this.refresh(); return true;
   }
 
+  districtSwitchError(id) {
+    if (!Object.hasOwn(DISTRICTS, id) || !this.values.unlockedDistricts.includes(id)) return 'Сначала откройте район';
+    if (this.isTransportLocked?.() || this.isDistrictLocked?.() || this.isDistrictBlocked?.()) return 'СНАЧАЛА ЗАВЕРШИТЕ ТЕКУЩИЙ ЗАКАЗ';
+    return null;
+  }
+
   selectDistrict(id) {
-    if (!this.values.unlockedDistricts.includes(id)) return false;
+    if (this.districtSwitchError(id)) return false;
     this.values.selectedDistrict = id; this.refresh(); return true;
   }
 
-  getSaveData() { return { version: 7, ...this.getSnapshot() }; }
+  markDistrictIntroduction(id) {
+    if (!this.values.unlockedDistricts.includes(id) || this.values.districtIntroductionsSeen.includes(id)) return false;
+    this.values.districtIntroductionsSeen.push(id); this.refresh(); return true;
+  }
+
+  getSaveData() { return { version: 8, ...this.getSnapshot() }; }
 
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
@@ -151,6 +180,14 @@ export class GameState {
     this.nextCloseOrder = false;
     if (Array.isArray(data.unlockedDistricts)) this.values.unlockedDistricts = [...new Set(['residential', ...data.unlockedDistricts.filter(id => typeof id === 'string' && Object.hasOwn(DISTRICTS, id))])];
     if (this.values.unlockedDistricts.includes(data.selectedDistrict)) this.values.selectedDistrict = data.selectedDistrict;
+    // Existing unlocked districts are already familiar in pre-Stage 8 saves.
+    this.values.districtIntroductionsSeen = [...new Set(['residential', ...(Array.isArray(data.districtIntroductionsSeen)
+      ? data.districtIntroductionsSeen.filter(id => this.values.unlockedDistricts.includes(id))
+      : this.values.unlockedDistricts)])];
+    for (const id of Object.keys(DISTRICTS)) for (const key of Object.keys(emptyDistrictStats())) {
+      const value = data.districtStats?.[id]?.[key];
+      if (Number.isFinite(value)) this.values.districtStats[id][key] = Math.max(0, Math.floor(value));
+    }
     if (Number.isFinite(data.demandBonusOrders)) this.values.demandBonusOrders = Math.min(EVENT_BALANCE.demandOrders, Math.max(0, Math.floor(data.demandBonusOrders)));
     if (Array.isArray(data.ownedItems)) this.values.ownedItems = [...new Set(data.ownedItems.filter(id => itemById(id)))];
     for (const category of CATEGORIES) {

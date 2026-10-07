@@ -18,6 +18,7 @@ export class EventManager {
   eligible(event, checkDeadline = true) {
     const s = this.state.getSnapshot(), r = event.requirements || {};
     return (!r.bicycle || s.transport === 'BICYCLE') && (!r.reputation || s.reputation >= r.reputation)
+      && (!r.districts || r.districts.includes(s.selectedDistrict))
       && (!r.transports || r.transports.includes(s.equippedTransport))
       && (!r.nearDeadline || !checkDeadline || this.orders.remainingSeconds() <= B.nearDeadline)
       && (this.negativeStreak < B.maxNegativeStreak || event.category === 'POSITIVE' || event.category === 'NEUTRAL')
@@ -27,6 +28,7 @@ export class EventManager {
   weighted(pool) {
     const s = this.state.getSnapshot();
     const weights = pool.map(e => e.weight
+      * (DISTRICTS[s.selectedDistrict].eventWeights[e.id] ?? 1)
       * (e.requirements?.food && s.equippedItems.BAG === 'thermobag' ? B.bagRisk : 1)
       * (e.requirements?.food ? transportFor(s.equippedTransport).fragileModifier : 1)
       * (transportFor(s.equippedTransport).eventModifiers[e.id]?.[s.selectedDistrict] || 1)
@@ -40,8 +42,9 @@ export class EventManager {
     const district = DISTRICTS[this.state.getSnapshot().selectedDistrict];
     let roll = this.random(), rarity;
     for (const [key, chance] of Object.entries(B.rarity)) {
-      if (roll < chance * district.event) { rarity = key; break; }
-      roll -= chance * district.event;
+      const adjusted = chance * district.event * (this.orders.order?.eventMultiplier || 1);
+      if (roll < adjusted) { rarity = key; break; }
+      roll -= adjusted;
     }
     if (!rarity) return;
     this.pending = this.weighted(EVENTS.filter(e => e.rarity === rarity && e.id !== this.lastId && this.eligible(e, false)));
@@ -82,7 +85,16 @@ export class EventManager {
       if (this.random() < chance) { effects.reputation = B.complaintReputation; lines.push('Клиент пожаловался: «А где торжественная передача?»'); }
       else lines.push('Клиент получил заказ. Связь с человечеством восстановлена.');
     }
-    if (effects.tips) effects.money = Math.round(range(effects.tips) * tier.tips);
+    if (effects.eliteSecurity) {
+      if (s.reputation >= B.district.eliteSkipReputation) lines.push('ВАС УЗНАЛИ! Проходите без ожидания.');
+      else effects.time = B.district.eliteWaitTime;
+    }
+    if (effects.businessCall) {
+      if (this.random() < B.district.businessCallSuccess) lines.push('Клиент подтвердил пропуск. Проходите!');
+      else { effects.time = B.district.businessCallTime; lines.push('Клиент ищет заявку. Небольшая задержка.'); }
+    }
+    if (effects.moneyRange) effects.money = range(effects.moneyRange);
+    if (effects.tips) effects.money = Math.round(range(effects.tips) * tier.tips * DISTRICTS[s.selectedDistrict].tip * (this.orders.getTarget() ? this.orders.order.tipMultiplier || 1 : 1));
     if (effects.reputationRange) effects.reputation = range(effects.reputationRange);
     if (effects.money) {
       const actual = this.state.applyEventMoney(effects.money, Boolean(effects.tips));

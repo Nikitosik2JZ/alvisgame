@@ -1,6 +1,6 @@
 import { BALANCE, xpForLevel } from '../config/gameBalance.js';
 import { ORDER_STATUS } from '../managers/OrderManager.js';
-import { ORDER_TYPES } from '../config/economyConfig.js';
+import { ORDER_TYPES, DISTRICTS } from '../config/economyConfig.js';
 import { transportFor } from '../config/transportConfig.js';
 
 export class OrderUI {
@@ -44,6 +44,8 @@ export class OrderUI {
   render(event, order, extra) {
     const available = order.status === ORDER_STATUS.AVAILABLE;
     const typeLabel = ORDER_TYPES[order.type]?.name || 'ОБЫЧНЫЙ';
+    const districtName = DISTRICTS[order.district]?.name || '';
+    this.panel.dataset.value = order.type === 'ELITE' ? 'elite' : order.type === 'LARGE' ? 'large' : 'normal';
     const progress = order.type === 'DOUBLE' ? ` · ${order.deliveredCount} / 2 доставлено` : '';
     this.panel.dataset.mode = available ? 'offer' : managerIsActive(order) ? 'active' : 'result';
     this.toggle.hidden = !managerIsActive(order);
@@ -58,20 +60,20 @@ export class OrderUI {
     this.distance.hidden = true;
     if (available) {
       this.objective.textContent = `НОВЫЙ ЗАКАЗ · ${typeLabel}`;
-      document.querySelector('#offer-restaurant').textContent = order.restaurant.name;
+      document.querySelector('#offer-restaurant').textContent = `${districtName} · ${order.cargo || order.restaurant.name}`;
       document.querySelector('#offer-reward').textContent = `${order.reward} ₽`;
-      document.querySelector('#offer-summary').textContent = `${order.distance} м · ${order.deliveryTime} сек.${order.requiredTransport ? ` · Требуется: ${transportFor(order.requiredTransport).name}` : ''}`;
-      document.querySelector('#offer-details').textContent = `Расстояние: ${order.distance} м · Оплата: ${order.reward} ₽ · Время: ${order.deliveryTime} сек.\n${order.requiredTransport ? 'Требуется' : 'Рекомендуемый транспорт'}: ${transportFor(order.requiredTransport || order.recommendedTransport).name}`;
+      document.querySelector('#offer-summary').textContent = `${order.distance} м · ${order.deliveryTime} сек. · +${order.reputationReward} реп.${order.requiredTransport ? ` · Требуется: ${transportFor(order.requiredTransport).name}` : ''}`;
+      document.querySelector('#offer-details').textContent = `${order.flavor ? `${order.flavor}\n` : ''}${districtName}\nРасстояние: ${order.distance} м · Оплата: ${order.reward} ₽ · Время: ${order.deliveryTime} сек.\n+${order.xpReward} XP · +${order.reputationReward} репутации${order.masteryBonus ? ` · Мастерство +${Math.round(order.masteryBonus * 100)}% включено` : ''}\n${order.requiredTransport ? 'Требуется' : 'Рекомендуемый транспорт'}: ${transportFor(order.requiredTransport || order.recommendedTransport).name}`;
     } else if (managerIsActive(order)) {
       this.objective.textContent = order.status === ORDER_STATUS.ACCEPTED
         ? `Заберите · ${order.restaurant.name}${progress}` : `Доставьте · ${order.customer.name}${progress}`;
-      this.details.textContent = `${typeLabel} · Базовая оплата: ${order.reward} ₽\nРесторан: ${order.restaurant.name}\nКлиент: ${order.customer.name}\n${order.requiredTransport ? 'Требуется' : 'Рекомендуется'}: ${transportFor(order.requiredTransport || order.recommendedTransport).name}`;
+      this.details.textContent = `${typeLabel} · ${districtName}${order.flavor ? `\n${order.flavor}` : ''} · Базовая оплата: ${order.reward} ₽\nРесторан: ${order.restaurant.name}\nКлиент: ${order.customer.name}\n+${order.xpReward} XP · +${order.reputationReward} реп. · Провал −${order.failurePenalty}\n${order.requiredTransport ? 'Требуется' : 'Рекомендуется'}: ${transportFor(order.requiredTransport || order.recommendedTransport).name}`;
     } else {
       this.objective.textContent = order.status === ORDER_STATUS.DELIVERED ? `${typeLabel}${progress} · ЗАКАЗ ДОСТАВЛЕН` : 'ВРЕМЯ ВЫШЛО';
       this.result.hidden = false;
       this.result.textContent = order.status === ORDER_STATUS.DELIVERED
         ? `+${extra.payout.total} ₽ · +${order.xpReward} XP · +${order.reputationReward} репутации`
-        : `Заказ провален · −${BALANCE.failurePenalty} репутации`;
+        : `Заказ провален · −${order.failurePenalty} репутации`;
       if (extra.level > extra.previousLevel) this.result.textContent += `\nНОВЫЙ УРОВЕНЬ! Уровень ${extra.level}`;
       if (extra.payout?.modifiers.length) this.result.textContent += `\nБазовая оплата: ${extra.payout.baseReward} ₽\n${extra.payout.modifiers.map(modifier => `${modifier.name}: ${modifier.amount >= 0 ? '+' : ''}${modifier.amount} ₽`).join('\n')}\nИтого: ${extra.payout.total} ₽`;
     }

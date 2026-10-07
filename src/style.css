@@ -56,6 +56,16 @@ button:focus-visible { outline: 3px solid #87e4fa; outline-offset: 2px; }
 #result { white-space: pre-line; color: #fff4da; }
 #event-effects, #event-history, #district-list p { white-space: pre-line; line-height: 1.6; }
 #event-buttons { display: grid; gap: 12px; }
+#district-list { display: grid; gap: 12px; }
+.district-card { border-left: 5px solid var(--district-color); }
+#city-summary, #district-introduction p, #district-feedback { white-space: pre-line; line-height: 1.5; }
+#district-feedback { color: #ffe6a9; }
+#district-introduction { padding: 16px; margin-bottom: 16px; border: 1px solid #c4df8c; border-radius: 10px; background: #344539; }
+#district-introduction h3 { margin: 0; }
+#district-introduction button { width: 100%; }
+.order-panel[data-value="elite"] { border-color: #e4c77d; box-shadow: inset 3px 0 #e4c77d; }
+.order-panel[data-value="large"] { border-color: #87c4db; }
+#district-transition { position: fixed; inset: 0; display: grid; place-content: center; white-space: pre-line; text-align: center; line-height: 1.8; background: #182b29d9; font-size: 22px; pointer-events: all; }
 #event-buttons button { width: 100%; white-space: pre-line; line-height: 1.5; }
 .event-dialog .modal-header h2 { overflow-wrap: anywhere; }
 .hud-actions { flex-wrap: wrap; }

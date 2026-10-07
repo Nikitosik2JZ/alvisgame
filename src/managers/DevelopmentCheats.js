@@ -1,12 +1,50 @@
 import { xpForLevel } from '../config/gameBalance.js';
 import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
 import { COMPANY, employeeXpRequired } from '../config/companyConfig.js';
+import { DISTRICTS, DISTRICT_MASTERY, ELITE_ORDERS } from '../config/districtConfig.js';
 
 export function setupDevelopmentCheats(scene, state) {
   if (!import.meta.env.DEV) return;
+  const unlock = id => {
+    const d = DISTRICTS[id]; if (!d || state.values.unlockedDistricts.includes(id)) return false;
+    state.update({ xp: Math.max(state.values.xp, xpForLevel(d.level)), money: state.values.money + d.cost,
+      reputation: Math.max(state.values.reputation, d.reputation) });
+    if (d.requiredOwnedTransports && !d.requiredOwnedTransports.some(t => state.values.ownedTransports.includes(t))) {
+      state.values.ownedTransports.push(d.requiredOwnedTransports[0]); state.refresh();
+    }
+    return state.unlockDistrict(id);
+  };
+  const debug = {
+    unlockNext: () => unlock(Object.keys(DISTRICTS).find(id => !state.values.unlockedDistricts.includes(id))),
+    unlockAll: () => Object.keys(DISTRICTS).forEach(unlock),
+    setReputation: reputation => { if (Number.isFinite(reputation)) state.update({ reputation }); },
+    setLevel: level => { if (Number.isInteger(level) && level >= 1) state.update({ xp: xpForLevel(level) }); },
+    elite: variant => {
+      if (!ELITE_ORDERS.districts.includes(state.values.selectedDistrict) || scene.orders.getTarget() || document.querySelector('dialog[open]') || scene.districtTransition) return false;
+      state.update({ xp: Math.max(state.values.xp, xpForLevel(ELITE_ORDERS.level)), reputation: Math.max(state.values.reputation, ELITE_ORDERS.reputation) });
+      scene.orders.order = null; return scene.orders.generate({ forcedType: 'ELITE', forcedVariant: variant });
+    },
+    mastery: (count = DISTRICT_MASTERY.at(-1).min) => {
+      if (!Number.isFinite(count)) return;
+      state.values.districtStats[state.values.selectedDistrict].completedOrders = Math.max(0, Math.floor(count)); state.refresh();
+    },
+    switchDistrict: id => scene.districtUI.switchTo(id),
+  };
+  window.courierDebug = debug;
   const handler = (event) => {
     if (event.repeat) return;
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName)) return;
+    if (event.ctrlKey && event.altKey && ['KeyN', 'KeyA', 'KeyE', 'KeyK', 'KeyD'].includes(event.code)) {
+      event.preventDefault();
+      if (event.code === 'KeyN') debug.unlockNext();
+      if (event.code === 'KeyA') debug.unlockAll();
+      if (event.code === 'KeyE') debug.elite();
+      if (event.code === 'KeyK') debug.mastery();
+      if (event.code === 'KeyD') {
+        const ids = state.values.unlockedDistricts; debug.switchDistrict(ids[(ids.indexOf(state.values.selectedDistrict) + 1) % ids.length]);
+      }
+      console.debug(`[Development] ${event.code}: Stage 8 city command`); return;
+    }
     if (event.altKey && ['KeyR', 'KeyP', 'KeyL', 'Digit1', 'Digit2', 'Digit3', 'KeyU', 'KeyT'].includes(event.code)) {
       event.preventDefault(); const company = scene.company, s = state.values;
       if (!s.companyUnlocked) return;
@@ -71,5 +109,5 @@ export function setupDevelopmentCheats(scene, state) {
     }
   };
   window.addEventListener('keydown', handler);
-  scene.events.once('shutdown', () => window.removeEventListener('keydown', handler));
+  scene.events.once('shutdown', () => { window.removeEventListener('keydown', handler); if (window.courierDebug === debug) delete window.courierDebug; });
 }

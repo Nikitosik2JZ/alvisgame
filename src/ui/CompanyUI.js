@@ -1,5 +1,6 @@
 import { ModalUI } from './ModalUI.js';
 import { COMPANY, companyLevel, companyVehicle, archetypeFor, companyRank, employeeXpRequired, upgradeEffect } from '../config/companyConfig.js';
+import { companyDistrictBonus } from '../config/districtConfig.js';
 
 const rubles = value => `${Math.floor(value).toLocaleString('ru-RU')} ₽`;
 const text = (root, selector, value) => { root.querySelector(selector).textContent = value; };
@@ -87,7 +88,7 @@ export class CompanyUI extends ModalUI {
     const summary = this.dialog.querySelector('#company-summary'); summary.replaceChildren();
     const efficiency = s.employees.length ? s.employees.reduce((sum, e) => sum + this.manager.employeeEfficiency(e, s), 0) / s.employees.length : 1;
     for (const [label, value] of [ ['Ранг компании', companyRank(s.companyReputation).name], ['Офис', `${current.name} · Ур. ${s.officeLevel}`], ['Курьеров', `${s.employees.length} / ${current.slots}`],
-      ['Доход компании', `${rubles(this.manager.incomeRate(s))} / мин`], ['Заработано компанией', rubles(s.companyLifetimeEarnings)],
+      ['Доход компании', `${rubles(this.manager.incomeRate(s))} / мин`], ['Бонус районов', `+${Math.round(companyDistrictBonus(s) * 100)}%`], ['Заработано компанией', rubles(s.companyLifetimeEarnings)],
       ['Эффективность', percent(efficiency)], ['Репутация компании', s.companyReputation.toFixed(1)],
       ['Заказы сотрудников', s.companyStats.employeeDeliveries], ['Провалено', s.companyStats.employeeFailures],
       ['Хороших / плохих событий', `${s.companyStats.positiveEvents} / ${s.companyStats.negativeEvents}`], ['Рекорд дохода', `${rubles(s.companyStats.highestIncomePerMinute)} / мин`],
@@ -176,7 +177,7 @@ export class CompanyUI extends ModalUI {
         const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = label; dd.textContent = value; detail.append(dt, dd);
       }
       const f = this.manager.incomeFactors(employee, s);
-      text(card, '[data-income-formula]', `${rubles(f.base)} × транспорт ${f.transport.toFixed(2)} × эффективность ${f.efficiency.toFixed(3)} × скорость ${f.speed.toFixed(3)} × офис ${f.office.toFixed(2)} × компания ${f.company.toFixed(3)} × надёжность ${f.reliability.toFixed(3)} × события ${f.event.toFixed(2)}.\nСкорость даёт больший эффект на транспорте; надёжность уменьшает ожидаемые потери.`);
+      text(card, '[data-income-formula]', `${rubles(f.base)} × транспорт ${f.transport.toFixed(2)} × эффективность ${f.efficiency.toFixed(3)} × скорость ${f.speed.toFixed(3)} × офис ${f.office.toFixed(2)} × компания ${f.company.toFixed(3)} × надёжность ${f.reliability.toFixed(3)} × районы ${f.districts.toFixed(2)} × события ${f.event.toFixed(2)}.\nСкорость даёт больший эффект на транспорте; надёжность уменьшает ожидаемые потери.`);
     }
   }
 
