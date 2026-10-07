@@ -30,6 +30,7 @@
         <button id="open-garage">ГАРАЖ<small>Транспорт</small></button>
         <button id="open-events">СОБЫТИЯ<small>История</small></button>
         <button id="open-company">КОМПАНИЯ<small>Свой бизнес</small></button>
+        <button id="open-progress">ПРОГРЕСС<small>Карьера и наследие</small></button>
       </nav>
       <div id="current-transport" class="xp"></div>
       <div id="transport-goal" class="progression-goal"></div>
@@ -138,6 +139,25 @@
         </div>
       </div>
     </dialog>
+    <dialog id="progress-dialog" class="progression-dialog" aria-labelledby="progress-heading">
+      <div class="modal-header"><h2 id="progress-heading">ПРОГРЕСС</h2><button data-close>ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content">
+        <p id="progress-summary" class="goal-card"></p>
+        <nav class="company-tabs" aria-label="Разделы прогресса">
+          <button data-progress-view="career">КАРЬЕРА</button><button data-progress-view="achievements">ДОСТИЖЕНИЯ</button>
+          <button data-progress-view="records">РЕКОРДЫ</button><button data-progress-view="legacy">НАСЛЕДИЕ</button>
+        </nav>
+        <p id="progress-feedback" role="status" aria-live="polite"></p>
+        <section id="magnate-celebration" hidden>
+          <h3>КУРЬЕРСКИЙ МАГНАТ</h3>
+          <p>Когда-то у вас не было даже велосипеда. Теперь на вас работает целая служба доставки. Но это только начало.</p>
+          <p>Титул открыт. Заберите +5 очков наследия за этап карьеры. Продолжайте доставки, развивайте компанию и ставьте рекорды.</p>
+          <button id="magnate-continue">ПРОДОЛЖИТЬ</button>
+        </section>
+        <div id="progress-content"></div>
+      </div>
+    </dialog>
+    <aside id="achievement-toast" role="status" aria-live="polite" hidden></aside>
     <aside id="transport-milestone" role="status" aria-live="polite" hidden></aside>
     <script type="module" src="/src/main.js"></script>
   </body>

@@ -3,6 +3,7 @@ import { EVENT_BALANCE as B } from '../config/eventBalance.js';
 import { DISTRICTS, reputationTier } from '../config/economyConfig.js';
 import { TemporaryModifiers } from './TemporaryModifiers.js';
 import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
+import { progressionMultiplier, reputationReward } from './ProgressionModifiers.js';
 
 export const fragileDamageRisk = s => Math.max(B.fragileMinimumRisk,
   B.fragileDamageRisk * transportFor(s.equippedTransport).fragileModifier * (s.equippedItems.BAG === 'thermobag' ? B.bagRisk : 1));
@@ -71,14 +72,15 @@ export class EventManager {
     const event = this.active.event;
     const effects = { ...(event.choices?.[choice]?.effects || event.possibleEffects) };
     const lines = [], s = this.state.getSnapshot(), tier = reputationTier(s.reputation);
+    const outcome = {};
     const range = ([min, max]) => min + Math.floor(this.random() * (max - min + 1));
     if (effects.dispute) {
-      if (this.random() < tier.dispute) lines.push('ПОДДЕРЖКА НА ВАШЕЙ СТОРОНЕ\nШтраф отменён.');
+      if (this.random() < tier.dispute) { outcome.disputeWon = true; lines.push('ПОДДЕРЖКА НА ВАШЕЙ СТОРОНЕ\nШтраф отменён.'); }
       else { effects.money = -B.colaFine; effects.reputation = B.colaReputation; lines.push('Поддержка поверила клиенту.'); }
     }
     if (effects.gamble === 'fries') {
-      if (this.random() < B.friesCaught) { effects.money = -B.friesFine; effects.reputation = B.friesReputation; lines.push('Клиент пересчитал картошку. Одной не хватает!'); }
-      else lines.push('Картошка исчезла без свидетелей. Совесть всё видела.');
+      if (this.random() < B.friesCaught) { outcome.friesCaught = true; effects.money = -B.friesFine; effects.reputation = B.friesReputation; lines.push('Клиент пересчитал картошку. Одной не хватает!'); }
+      else { outcome.friesEscaped = true; lines.push('Картошка исчезла без свидетелей. Совесть всё видела.'); }
     }
     if (effects.gamble === 'door' || effects.gamble === 'call') {
       const chance = effects.gamble === 'door' ? B.doorComplaint : 1 - B.callSuccess;
@@ -94,13 +96,14 @@ export class EventManager {
       else { effects.time = B.district.businessCallTime; lines.push('Клиент ищет заявку. Небольшая задержка.'); }
     }
     if (effects.moneyRange) effects.money = range(effects.moneyRange);
-    if (effects.tips) effects.money = Math.round(range(effects.tips) * tier.tips * DISTRICTS[s.selectedDistrict].tip * (this.orders.getTarget() ? this.orders.order.tipMultiplier || 1 : 1));
+    if (effects.tips) effects.money = Math.round(range(effects.tips) * tier.tips * DISTRICTS[s.selectedDistrict].tip * (this.orders.getTarget() ? this.orders.order.tipMultiplier || 1 : 1) * progressionMultiplier(s, 'tips'));
     if (effects.reputationRange) effects.reputation = range(effects.reputationRange);
     if (effects.money) {
       const actual = this.state.applyEventMoney(effects.money, Boolean(effects.tips));
+      if (effects.money > 0 && this.orders.getTarget()) this.orders.order.eventIncome = (this.orders.order.eventIncome || 0) + actual;
       lines.push(effects.money < 0 ? `ШТРАФ: ${-effects.money} ₽\nСписано: ${actual} ₽${actual < -effects.money ? '\nБаланс исчерпан' : ''}` : `БОНУС / ЧАЕВЫЕ: +${actual} ₽`);
     }
-    if (effects.reputation) { this.state.update({ reputation: s.reputation + effects.reputation }); lines.push(`РЕПУТАЦИЯ: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}`); }
+    if (effects.reputation) { effects.reputation = reputationReward(this.state.values, effects.reputation); this.state.update({ reputation: s.reputation + effects.reputation }); lines.push(`РЕПУТАЦИЯ: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}`); }
     const order = this.orders.getTarget() ? this.orders.order : null;
     if (effects.time) {
       if (order) { order.deadline -= effects.time * 1000; lines.push(`ВРЕМЯ ЗАКАЗА: −${effects.time} сек.`); }
@@ -130,6 +133,8 @@ export class EventManager {
     this.negativeStreak = bad ? this.negativeStreak + 1 : 0;
     if (bad && event.rarity === 'VERY_RARE') this.lastRareNegative = this.serial + 1;
     this.serial++; this.lastId = event.id;
+    this.state.progression.event({ ...outcome, friesHonest: event.id === 'fries' && choice === 0,
+      rarity: event.rarity, positive: event.category === 'POSITIVE', bad: Boolean(bad) });
     this.history.unshift({ title: event.title, text: lines.join('\n') || 'Обычная доставка. Без штрафов.', bad: Boolean(bad) });
     this.history.length = Math.min(this.history.length, B.historyLimit);
     this.active.resolved = true;

@@ -4,13 +4,14 @@ import { ModalUI } from './ModalUI.js';
 import { reputationTier, DISTRICTS } from '../config/economyConfig.js';
 import { transportFor, careerTitle, nextTransportGoal } from '../config/transportConfig.js';
 import { COMPANY } from '../config/companyConfig.js';
+import { selectedTitle } from '../managers/AchievementManager.js';
 
 export class PlayerProfileUI extends ModalUI {
   constructor(scene, state, player) {
     super(scene, player, 'profile-dialog', 'open-profile');
     this.unsubscribe = state.subscribe(snapshot => {
       const next = nextTransportGoal(snapshot);
-      const rows = [ ['Статус', careerTitle(snapshot)], ['Уровень', snapshot.level], ['Опыт', `${snapshot.xp} / ${xpForLevel(snapshot.level + 1)} XP`],
+      const rows = [ ['Статус', careerTitle(snapshot)], ['Титул', selectedTitle(snapshot) || careerTitle(snapshot)], ['Уровень', snapshot.level], ['Опыт', `${snapshot.xp} / ${xpForLevel(snapshot.level + 1)} XP`],
         ['Репутация', snapshot.reputation], ['Ранг репутации', reputationTier(snapshot.reputation).name], ['Баланс', `${snapshot.money} ₽`],
         ['Район', DISTRICTS[snapshot.selectedDistrict].name], ['Бонус спроса', `${snapshot.demandBonusOrders} заказов`],
         ['Транспорт', transportFor(snapshot.equippedTransport).name],

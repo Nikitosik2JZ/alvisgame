@@ -2,6 +2,9 @@ import { xpForLevel } from '../config/gameBalance.js';
 import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
 import { COMPANY, employeeXpRequired } from '../config/companyConfig.js';
 import { DISTRICTS, DISTRICT_MASTERY, ELITE_ORDERS } from '../config/districtConfig.js';
+import { CAREER_MILESTONES } from '../config/progressionConfig.js';
+import { ACHIEVEMENTS } from '../data/achievements.js';
+import { normalizeEmployee } from '../state/companyState.js';
 
 export function setupDevelopmentCheats(scene, state) {
   if (!import.meta.env.DEV) return;
@@ -15,6 +18,24 @@ export function setupDevelopmentCheats(scene, state) {
     return state.unlockDistrict(id);
   };
   const debug = {
+    progression: {
+      addLegacy: (amount = 1) => { if (Number.isSafeInteger(amount) && amount > 0) { state.values.legacyPoints += amount; state.values.legacyPointsEarned += amount; state.refresh(); } },
+      setLifetimeEarnings: (personal, company = state.values.companyLifetimeEarnings) => {
+        if ([personal, company].every(n => Number.isSafeInteger(n) && n >= 0)) { state.values.totalMoneyEarned = personal; state.values.companyLifetimeEarnings = company; state.refresh(); }
+      },
+      setDeliveries: count => { if (Number.isSafeInteger(count) && count >= 0) { state.values.completedOrders = count; state.refresh(); } },
+      unlockAchievement: (id = 'first-order') => {
+        const definition = ACHIEVEMENTS.find(a => a.id === id); if (!definition || state.values.achievements.includes(id)) return false;
+        state.values.achievements.push(id); state.progression.emit({ type: 'achievement', definition }); state.refresh(); return true;
+      },
+      completeNextCareer: () => {
+        const next = CAREER_MILESTONES.find(m => !state.values.careerMilestones.includes(m.id)); if (!next) return false;
+        for (const req of next.requirements) satisfy(req); state.refresh(); return true;
+      },
+      testMagnate: () => { for (const req of CAREER_MILESTONES.at(-1).requirements) satisfy(req); state.refresh(); },
+      // Re-derive unlocks without erasing claimed reward ledgers or purchased legacy.
+      rederiveAchievements: () => { state.values.achievements = [...state.values.claimedAchievementRewards]; state.progression.signatures.clear(); state.refresh(); },
+    },
     unlockNext: () => unlock(Object.keys(DISTRICTS).find(id => !state.values.unlockedDistricts.includes(id))),
     unlockAll: () => Object.keys(DISTRICTS).forEach(unlock),
     setReputation: reputation => { if (Number.isFinite(reputation)) state.update({ reputation }); },
@@ -29,6 +50,27 @@ export function setupDevelopmentCheats(scene, state) {
       state.values.districtStats[state.values.selectedDistrict].completedOrders = Math.max(0, Math.floor(count)); state.refresh();
     },
     switchDistrict: id => scene.districtUI.switchTo(id),
+  };
+  const satisfy = ({ source, target }) => {
+    const s = state.values, [kind, id] = source.split(':');
+    if (kind === 'level') s.xp = Math.max(s.xp, xpForLevel(target));
+    if (kind === 'reputation') s.reputation = Math.max(s.reputation, target);
+    if (kind === 'deliveries') s.completedOrders = Math.max(s.completedOrders, target);
+    if (kind === 'personalEarnings') s.totalMoneyEarned = Math.max(s.totalMoneyEarned, target);
+    if (kind === 'companyEarnings') s.companyLifetimeEarnings = Math.max(s.companyLifetimeEarnings, target);
+    if (kind === 'transport' && !s.ownedTransports.includes(id)) s.ownedTransports.push(id);
+    if (kind === 'districts') s.unlockedDistricts = Object.keys(DISTRICTS);
+    if (kind === 'maxMastery') s.districtStats.residential.completedOrders = Math.max(s.districtStats.residential.completedOrders, target);
+    if (['company', 'companyLevel', 'employees'].includes(kind)) s.companyUnlocked = true;
+    if (kind === 'companyLevel') s.officeLevel = s.companyLevel = Math.max(s.companyLevel, target);
+    if (kind === 'employees') {
+      s.officeLevel = s.companyLevel = Math.max(s.companyLevel, COMPANY.levels.find(l => l.slots >= target).level);
+      while (s.employees.length < target) s.employees.push(normalizeEmployee({ id: scene.company.nextId('courier', s.employees), name: 'Тестовый курьер' }));
+    }
+    if (kind === 'publicAchievements') for (const a of ACHIEVEMENTS.filter(a => !a.hidden)) {
+      if (s.achievements.filter(id => ACHIEVEMENTS.find(a => a.id === id && !a.hidden)).length >= target) break;
+      if (!s.achievements.includes(a.id)) s.achievements.push(a.id);
+    }
   };
   window.courierDebug = debug;
   const handler = (event) => {

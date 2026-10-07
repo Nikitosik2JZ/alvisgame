@@ -141,6 +141,12 @@ Save version 5 adds completedOrders, failedOrders, totalMoneyEarned, totalTipsEa
 
 Old counters default to zero; historical totals are not reconstructed. Legacy bicycle entries in ownedItems/equippedItems.TRANSPORT migrate to ownedTransports/equippedTransport and are discarded from equipment. The existing localStorage key remains unchanged. Current saves contain no duplicate vehicle ownership in equipment. Unit checks cover counters, single payment/failure, API separation and old-save migration; `tests/screens-browser.cjs` verifies purchases, read-only profile, menus and automatic reload on desktop and mobile.
 
+## Stage 9: long-term progression
+
+Stage 9 adds **ПРОГРЕСС** with career, achievements, records and non-destructive legacy. There are ten configurable career milestones, 32 achievements across eight categories, eight global goals, a suggested next goal, manual one-time reward claims and selectable cosmetic titles. Five permanent legacy upgrades give modest 3–5% bonuses. The final **Курьерский магнат** milestone celebrates once and allows continued play. Existing assets, company, districts, levels and saves are preserved and migrated to version 9.
+
+See [STAGE9.md](STAGE9.md) for the complete requirements/rewards, achievement list, legacy sources/effects, migration, debug API, files, validation and limitations. `npm test` includes the Stage 9 progression tests. With the dev server and production preview running, `node tests/stage9-browser.cjs` verifies desktop/mobile progression, old saves, claims, records, legacy and endgame; set `GAME_URL`, `PREVIEW_URL`, `PLAYWRIGHT_MODULE`, `CHROME_PATH` or `ARTIFACT_DIR` if needed. No Stage 10 systems are included.
+
 ## Stage 8: city progression and elite deliveries
 
 See [STAGE8.md](STAGE8.md) for district requirements, order/event weights, elite variants, mastery, company income modifiers, migration, debug controls and verification. Open **КАРТА** from the existing HUD/menu for five manageable districts: Спальный район, Центр, Промзона, Элитный район and Деловой квартал. Scene transitions retain progression and clear short movement effects.

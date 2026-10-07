@@ -29,7 +29,7 @@ test('explicit acceptance, proximity, single reward, and next offer', () => {
   assert.equal(first.status, ORDER_STATUS.DELIVERED);
   assert.equal(manager.interact(first.customer), false);
   const initial = new GameState().getSnapshot();
-  assert.deepEqual(state.getSnapshot(), { ...initial, districtStats: { ...initial.districtStats, residential: { completedOrders: 1, failedOrders: 0, totalEarned: first.reward, bestDeliveryReward: first.reward } }, money: first.reward, xp: first.xpReward, reputation: first.reputationReward, completedOrders: 1, totalMoneyEarned: first.reward, totalDistanceDelivered: first.distance });
+  assert.deepEqual(state.getSnapshot(), { ...initial, achievements: ['first-order'], personalRecords: { ...initial.personalRecords, highestDeliveryReward: first.reward, mostMoneyInOrder: first.reward, highestReputation: first.reputationReward }, districtStats: { ...initial.districtStats, residential: { completedOrders: 1, failedOrders: 0, totalEarned: first.reward, bestDeliveryReward: first.reward } }, money: first.reward, xp: first.xpReward, reputation: first.reputationReward, completedOrders: 1, totalMoneyEarned: first.reward, totalDistanceDelivered: first.distance });
   advance(BALANCE.nextOrderDelay);
   assert.equal(manager.order.status, ORDER_STATUS.AVAILABLE);
   assert.notEqual(manager.order.id, first.id);

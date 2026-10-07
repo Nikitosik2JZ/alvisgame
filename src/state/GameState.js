@@ -5,6 +5,9 @@ import { emptyDistrictStats } from '../config/districtConfig.js';
 import { EVENT_BALANCE } from '../config/eventBalance.js';
 import { TRANSPORT, transportById, transportFor, TRANSPORTS } from '../config/transportConfig.js';
 import { initialCompanyState, loadCompanyState } from './companyState.js';
+import { initialProgressionState, loadProgressionState } from './progressionState.js';
+import { AchievementManager } from '../managers/AchievementManager.js';
+import { progressionMultiplier, reputationReward, personalXpReward } from '../managers/ProgressionModifiers.js';
 
 const STAT_KEYS = ['completedOrders', 'failedOrders', 'totalMoneyEarned', 'totalTipsEarned', 'totalFinesPaid', 'totalDistanceDelivered'];
 
@@ -13,11 +16,11 @@ const initialState = () => ({ money: 0, level: 1, xp: 0, reputation: 0, movement
   districtIntroductionsSeen: ['residential'], districtStats: Object.fromEntries(Object.keys(DISTRICTS).map(id => [id, emptyDistrictStats()])),
   transport: TRANSPORT.WALKING, equippedTransport: TRANSPORT.WALKING, ownedTransports: [TRANSPORT.WALKING], transportMilestones: [],
   largeOrderBoost: 0, ownedItems: [], equippedItems: { SHOES: null, BAG: null },
-  ...Object.fromEntries(STAT_KEYS.map(key => [key, 0])), ...initialCompanyState() });
+  ...Object.fromEntries(STAT_KEYS.map(key => [key, 0])), ...initialCompanyState(), ...initialProgressionState() });
 
 // One owner for progression. Derived stats are recalculated, never trusted from saves.
 export class GameState {
-  constructor() { this.values = initialState(); this.listeners = new Set(); }
+  constructor() { this.values = initialState(); this.listeners = new Set(); this.progression = new AchievementManager(this); this.progression.evaluate(true); }
 
   getSnapshot() {
     return { ...this.values, unlockedDistricts: [...this.values.unlockedDistricts], ownedTransports: [...this.values.ownedTransports],
@@ -26,7 +29,11 @@ export class GameState {
       employees: this.values.employees.map(e => ({ ...e })), companyVehicles: this.values.companyVehicles.map(v => ({ ...v })),
       companyStats: { ...this.values.companyStats }, companyLog: [...this.values.companyLog],
       companyCandidates: this.values.companyCandidates.map(c => ({ ...c })), companyUpgrades: { ...this.values.companyUpgrades },
-      companyEffects: this.values.companyEffects.map(e => ({ ...e })), companyEventState: { ...this.values.companyEventState } };
+      companyEffects: this.values.companyEffects.map(e => ({ ...e })), companyEventState: { ...this.values.companyEventState },
+      achievements: [...this.values.achievements], claimedAchievementRewards: [...this.values.claimedAchievementRewards],
+      careerMilestones: [...this.values.careerMilestones], claimedCareerRewards: [...this.values.claimedCareerRewards],
+      legacyUpgrades: [...this.values.legacyUpgrades], eventCounters: { ...this.values.eventCounters },
+      personalRecords: { ...this.values.personalRecords }, companyRecords: { ...this.values.companyRecords } };
   }
 
   refresh() {
@@ -34,7 +41,8 @@ export class GameState {
     this.values.transport = this.values.equippedTransport;
     const transport = transportFor(this.values.transport);
     const shoes = itemById(this.values.equippedItems.SHOES);
-    this.values.movementSpeed = Math.round(transport.movementSpeed * (transport.id === TRANSPORT.WALKING ? 1 + (shoes?.walkingBonus || 0) : 1));
+    this.values.movementSpeed = Math.round(transport.movementSpeed * (transport.id === TRANSPORT.WALKING ? 1 + (shoes?.walkingBonus || 0) : 1) * progressionMultiplier(this.values, 'speed'));
+    this.progression.evaluate(Boolean(this.loadingProgression));
     for (const listener of this.listeners) listener(this.getSnapshot());
   }
 
@@ -47,13 +55,14 @@ export class GameState {
     this.refresh();
   }
 
-  addRewards({ reward, xpReward, reputationReward, distance = 0, district = this.values.selectedDistrict }) {
+  addRewards({ reward, xpReward, reputationReward: reputationAmount, distance = 0, district = this.values.selectedDistrict, elapsedSeconds, orderMoney = reward, type }) {
+    this.progression.delivery({ reward, distance, elapsedSeconds, orderMoney, type });
     this.values.completedOrders++;
     this.values.totalMoneyEarned += reward;
     this.values.totalDistanceDelivered += Math.max(0, Math.round(distance));
     const stats = this.values.districtStats[district];
     if (stats) { stats.completedOrders++; stats.totalEarned += reward; stats.bestDeliveryReward = Math.max(stats.bestDeliveryReward, reward); }
-    this.update({ money: this.values.money + reward, xp: this.values.xp + xpReward, reputation: this.values.reputation + reputationReward });
+    this.update({ money: this.values.money + reward, xp: this.values.xp + personalXpReward(this.values, xpReward), reputation: this.values.reputation + reputationReward(this.values, reputationAmount) });
   }
 
   failOrder(penalty, district = this.values.selectedDistrict) {
@@ -67,7 +76,7 @@ export class GameState {
     if (actual > 0) {
       this.values.totalMoneyEarned += actual;
       this.values.districtStats[this.values.selectedDistrict].totalEarned += actual;
-      if (tips) this.values.totalTipsEarned += actual;
+      if (tips) { this.values.totalTipsEarned += actual; this.values.personalRecords.biggestTip = Math.max(this.values.personalRecords.biggestTip, actual); }
     } else this.values.totalFinesPaid -= actual;
     this.update({ money: this.values.money + actual });
     return Math.abs(actual);
@@ -171,12 +180,14 @@ export class GameState {
     this.values.districtIntroductionsSeen.push(id); this.refresh(); return true;
   }
 
-  getSaveData() { return { version: 8, ...this.getSnapshot() }; }
+  getSaveData() { return { version: 9, ...this.getSnapshot() }; }
 
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
     this.values = initialState();
     Object.assign(this.values, loadCompanyState(data));
+    Object.assign(this.values, loadProgressionState(data));
+    this.progression.signatures.clear(); this.loadingProgression = true;
     this.nextCloseOrder = false;
     if (Array.isArray(data.unlockedDistricts)) this.values.unlockedDistricts = [...new Set(['residential', ...data.unlockedDistricts.filter(id => typeof id === 'string' && Object.hasOwn(DISTRICTS, id))])];
     if (this.values.unlockedDistricts.includes(data.selectedDistrict)) this.values.selectedDistrict = data.selectedDistrict;
@@ -203,6 +214,7 @@ export class GameState {
     if (Number.isFinite(data.largeOrderBoost)) this.values.largeOrderBoost = Math.max(0, Math.min(EVENT_BALANCE.largeOrderBoost, data.largeOrderBoost));
     for (const key of STAT_KEYS) if (Number.isFinite(data[key])) this.values[key] = Math.max(0, Math.floor(data[key]));
     this.update(data);
+    this.loadingProgression = false;
     return true;
   }
 

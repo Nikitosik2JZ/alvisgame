@@ -177,7 +177,7 @@ export class CompanyUI extends ModalUI {
         const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = label; dd.textContent = value; detail.append(dt, dd);
       }
       const f = this.manager.incomeFactors(employee, s);
-      text(card, '[data-income-formula]', `${rubles(f.base)} × транспорт ${f.transport.toFixed(2)} × эффективность ${f.efficiency.toFixed(3)} × скорость ${f.speed.toFixed(3)} × офис ${f.office.toFixed(2)} × компания ${f.company.toFixed(3)} × надёжность ${f.reliability.toFixed(3)} × районы ${f.districts.toFixed(2)} × события ${f.event.toFixed(2)}.\nСкорость даёт больший эффект на транспорте; надёжность уменьшает ожидаемые потери.`);
+      text(card, '[data-income-formula]', `${rubles(f.base)} × транспорт ${f.transport.toFixed(2)} × эффективность ${f.efficiency.toFixed(3)} × скорость ${f.speed.toFixed(3)} × офис ${f.office.toFixed(2)} × компания ${f.company.toFixed(3)} × надёжность ${f.reliability.toFixed(3)} × районы ${f.districts.toFixed(2)} × наследие ${f.legacy.toFixed(2)} × события ${f.event.toFixed(2)}.\nСкорость даёт больший эффект на транспорте; надёжность уменьшает ожидаемые потери.`);
     }
   }
 

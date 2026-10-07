@@ -120,6 +120,7 @@ export class OrderManager {
       this.order = null; this.generate(); return false;
     }
     this.order.status = ORDER_STATUS.ACCEPTED;
+    this.order.acceptedAt = this.now(); this.order.eventIncome = 0;
     this.order.deadline = this.now() + this.order.deliveryTime * 1000;
     this.events?.prepare();
     this.emit('accepted');
@@ -169,7 +170,11 @@ export class OrderManager {
       this.order.status = ORDER_STATUS.DELIVERED;
       const previousLevel = this.state.getSnapshot().level;
       const payout = calculateDeliveryReward(this.order.reward, this.state.getSnapshot(), this.order);
-      this.state.addRewards({ ...this.order, reward: payout.total });
+      const before = this.state.getSnapshot();
+      this.state.addRewards({ ...this.order, reward: payout.total, elapsedSeconds: (this.now() - this.order.acceptedAt) / 1000,
+        orderMoney: payout.total + (this.order.eventIncome || 0) });
+      const after = this.state.getSnapshot();
+      this.order.actualXpReward = after.xp - before.xp; this.order.actualReputationReward = after.reputation - before.reputation;
       if (this.state.getSnapshot().demandBonusOrders > 0 && !this.order.skipDemand) this.state.setDemand(this.state.getSnapshot().demandBonusOrders - 1);
       this.nextOrderAt = this.now() + BALANCE.nextOrderDelay;
       this.emit('completed', { previousLevel, level: this.state.getSnapshot().level, payout });

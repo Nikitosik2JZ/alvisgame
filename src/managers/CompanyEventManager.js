@@ -65,7 +65,7 @@ export class CompanyEventManager {
     }
     if (effects.cost) { s.money -= effects.cost; lines.push(`Оплачено: ${effects.cost} ₽.`); }
     const money = effects.money || 0;
-    if (money > 0) { this.company.creditBonus(money); lines.push(`В компанию: +${money} ₽.`); }
+    if (money > 0) { const credited = this.company.creditBonus(money); lines.push(`В компанию: +${credited} ₽.`); }
     if (money < 0 || effects.fine) { lines.push(`Штраф: ${this.fine(effects.fine || -money)} ₽ (с учётом защиты баланса).`); bad = true; }
     if (effects.reputation) { this.company.reputation(effects.reputation); lines.push(`Репутация компании: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}.`); }
     if (effects.permanentEfficiency && employee) {

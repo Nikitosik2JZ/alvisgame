@@ -2,6 +2,7 @@ import { COMPANY, companyLevel, companyName, companyVehicle, archetypeFor, clamp
 import { normalizeEmployee } from '../state/companyState.js';
 import { CompanyEventManager } from './CompanyEventManager.js';
 import { companyDistrictBonus } from '../config/districtConfig.js';
+import { progressionMultiplier } from './ProgressionModifiers.js';
 
 // The ledger is mathematical. No employee sprites, routes or per-frame payouts.
 export class CompanyManager {
@@ -9,6 +10,7 @@ export class CompanyManager {
     this.state = state; this.wallNow = wallNow; this.now = now; this.random = random;
     this.lastTick = now(); this.offlineEarned = 0;
     state.beforeDistrictUnlock = () => this.tick();
+    state.beforeProgressionPurchase = () => this.tick();
     this.events = new CompanyEventManager(this);
     if (state.values.companyUnlocked && state.values.candidateGeneration === 0) this.generateCandidates();
   }
@@ -33,6 +35,7 @@ export class CompanyManager {
         + Math.min(COMPANY.reputation.incomeCap, snapshot.companyReputation * COMPANY.reputation.incomeScale),
       reliability: 1 - this.failureChance(employee, snapshot, baseline) * COMPANY.failureIncomeLoss,
       districts: 1 + companyDistrictBonus(snapshot),
+      legacy: progressionMultiplier(snapshot, 'companyIncome'),
       event: baseline ? 1 : Math.max(.5, 1 + this.effect('companyIncome', null, snapshot) + this.effect('employeeIncome', employee.id, snapshot)) };
   }
   employeeRate(employee, snapshot = this.state.values, baseline = false) {
@@ -86,7 +89,9 @@ export class CompanyManager {
     return rubles;
   }
   creditBonus(amount) {
+    amount = Math.round(amount * progressionMultiplier(this.state.values, 'companyIncome'));
     const s = this.state.values; s.companyBalance += amount; s.companyLifetimeEarnings += amount;
+    return amount;
   }
   expireEffects() {
     const s = this.state.values;

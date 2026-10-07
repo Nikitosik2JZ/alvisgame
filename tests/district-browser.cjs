@@ -56,7 +56,7 @@ const viewports = [{width:1280,height:800},{width:390,height:844},{width:430,hei
 
       let s=await snapshot(); assert.equal(s.selectedDistrict,'center'); assert.deepEqual(s.unlockedDistricts,['residential','center']); assert.equal(s.completedOrders,52);
       assert.equal(s.districtStats.center.completedOrders,0); assert.ok(s.districtIntroductionsSeen.includes('center'));
-      assert.equal(JSON.parse(await page.evaluate(()=>localStorage.getItem('courier-empire-save-v1'))).version,8);
+      assert.equal(JSON.parse(await page.evaluate(()=>localStorage.getItem('courier-empire-save-v1'))).version,9);
       await open('districts'); assert.equal(await card('business').count(),1); await bounds('#district-dialog [data-close]');
       assert.equal(await page.locator('#district-dialog .modal-content').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
       await shot('legacy-city');

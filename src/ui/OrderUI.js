@@ -72,7 +72,7 @@ export class OrderUI {
       this.objective.textContent = order.status === ORDER_STATUS.DELIVERED ? `${typeLabel}${progress} · ЗАКАЗ ДОСТАВЛЕН` : 'ВРЕМЯ ВЫШЛО';
       this.result.hidden = false;
       this.result.textContent = order.status === ORDER_STATUS.DELIVERED
-        ? `+${extra.payout.total} ₽ · +${order.xpReward} XP · +${order.reputationReward} репутации`
+        ? `+${extra.payout.total} ₽ · +${order.actualXpReward ?? order.xpReward} XP · +${order.actualReputationReward ?? order.reputationReward} репутации`
         : `Заказ провален · −${order.failurePenalty} репутации`;
       if (extra.level > extra.previousLevel) this.result.textContent += `\nНОВЫЙ УРОВЕНЬ! Уровень ${extra.level}`;
       if (extra.payout?.modifiers.length) this.result.textContent += `\nБазовая оплата: ${extra.payout.baseReward} ₽\n${extra.payout.modifiers.map(modifier => `${modifier.name}: ${modifier.amount >= 0 ? '+' : ''}${modifier.amount} ₽`).join('\n')}\nИтого: ${extra.payout.total} ₽`;

@@ -168,9 +168,9 @@ test('pre-Stage 8 saves retain Center/company/personal progress and default new 
   }
 });
 
-test('version 8 preserves unseen introductions and sanitizes counters without trusting derived unlocks', () => {
+test('version 9 preserves unseen introductions and sanitizes counters without trusting derived unlocks', () => {
   const s = stateIn('elite'); s.values.districtIntroductionsSeen = ['residential']; s.values.districtStats.elite.completedOrders = 50;
-  const saved = s.getSaveData(), loaded = new GameState(); loaded.loadSaveData(saved); assert.deepEqual(loaded.getSaveData(), saved);
+  s.refresh(); const saved = s.getSaveData(), loaded = new GameState(); loaded.loadSaveData(saved); assert.deepEqual(loaded.getSaveData(), saved);
   const snapshot = loaded.getSnapshot(); snapshot.districtStats.elite.completedOrders = 0; snapshot.districtIntroductionsSeen.push('business');
   assert.equal(loaded.values.districtStats.elite.completedOrders, 50); assert.deepEqual(loaded.values.districtIntroductionsSeen, ['residential']);
   loaded.loadSaveData({ unlockedDistricts: ['center','center','__proto__','unknown'], selectedDistrict: 'elite', districtStats: { center: { completedOrders: -5, failedOrders: Infinity, totalEarned: 10.8, bestDeliveryReward: NaN } }, districtIntroductionsSeen: ['business','center','center'] });
@@ -215,8 +215,9 @@ test('company district modifier sums to 14%, applies online/offline and settles 
   assert.ok(company.employeeRate(employee) >= base*1.14);
 });
 
-test('career titles give company priority and distinguish premium courier from whole-city ownership', () => {
-  const state = stateIn('elite'); state.values.unlockedDistricts = ['residential','elite']; assert.equal(careerTitle(state.values),'Премиум-курьер');
-  state.values.unlockedDistricts = ids; assert.equal(careerTitle(state.values),'Король города');
-  state.values.companyUnlocked = true; assert.equal(careerTitle(state.values),'Предприниматель');
+test('career uses the single milestone path; city king requires mastery and persists when company opens', () => {
+  const state = stateIn('elite'); assert.equal(careerTitle(state.values),'Автокурьер');
+  state.values.unlockedDistricts = ids; state.refresh(); assert.equal(careerTitle(state.values),'Автокурьер');
+  state.values.districtStats.elite.completedOrders = 50; state.refresh(); assert.equal(careerTitle(state.values),'Король города');
+  state.values.companyUnlocked = true; state.refresh(); assert.equal(careerTitle(state.values),'Король города');
 });

@@ -183,10 +183,12 @@ test('version 5 roundtrips all vehicles, equipment, milestones and safe legacy m
 
 test('career follows permanent ownership and goals advance independently of equipped transport', () => {
   const state = new GameState(); state.update({ money: 60000, xp: xpForLevel(10) });
+  state.values.completedOrders = 15; state.refresh();
+  const expected = ['Пеший курьер', 'Велокурьер', 'Велокурьер', 'Автокурьер'];
   for (const t of TRANSPORTS) {
     if (t.id !== 'WALKING') state.purchaseTransport(t.id);
-    assert.equal(careerTitle(state.getSnapshot()), t.careerTitle);
+    assert.equal(careerTitle(state.getSnapshot()), expected[TRANSPORTS.indexOf(t)]);
     assert.equal(nextTransportGoal(state.getSnapshot())?.id, TRANSPORTS[TRANSPORTS.indexOf(t) + 1]?.id);
-    state.equipTransport('WALKING'); assert.equal(careerTitle(state.getSnapshot()), t.careerTitle);
+    state.equipTransport('WALKING'); assert.equal(careerTitle(state.getSnapshot()), expected[TRANSPORTS.indexOf(t)]);
   }
 });
