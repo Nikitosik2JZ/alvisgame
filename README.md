@@ -1,5 +1,11 @@
 # Courier Empire / Курьерская Империя
 
+## Stage 10: daily tasks, challenges and delivery streaks
+
+**ЗАДАНИЯ** is available through the existing secondary menu, with **ЕЖЕДНЕВНЫЕ**, **ЧЕЛЛЕНДЖИ**, **СЕРИЯ** tabs. Today's one-time bonus starts at level 1; three daily tasks unlock at level 2; one optional session challenge at level 3; one rotating challenge at level 5. There are 28 data-driven templates, filtered by actual unlocks, with three distinct daily categories. Missing days has no penalty. Delivery streaks preserve their best record and give capped one-order milestone bonuses (maximum 15%). Save version 10 migrates old saves without wiping progress.
+
+See [STAGE10.md](STAGE10.md) for the complete templates, targets, rewards, date/claim rules, records, achievements, reward pipeline, save migration and development commands. `npm test` includes the new task edge cases; `tests/stage10-browser.cjs` verifies development/production gameplay and responsive task screens using the same Playwright setup as Stage 9.
+
 A playable courier loop built on the existing Phaser 3 / Vite city, Arcade Physics collisions, shared GameState and LOCAL PlatformService. All visuals are original placeholder shapes.
 
 ## Run

@@ -12,6 +12,10 @@ export function progressValue(s, source) {
   if (kind === 'event') return s.eventCounters[id] || 0;
   if (kind === 'career') return Number(s.careerMilestones.includes(id));
   switch (kind) {
+    case 'bestStreak': return s.bestDeliveryStreak || 0;
+    case 'dailyTasks': return s.dailyTasksCompleted || 0;
+    case 'dailySets': return s.dailySetsCompleted || 0;
+    case 'challenges': return s.totalChallengesCompleted || 0;
     case 'deliveries': return s.completedOrders;
     case 'personalEarnings': return s.totalMoneyEarned;
     case 'companyEarnings': return s.companyLifetimeEarnings;

@@ -20,6 +20,7 @@ import { EventHistoryUI } from '../ui/EventHistoryUI.js';
 import { CompanyUI } from '../ui/CompanyUI.js';
 import { CompanyEventUI } from '../ui/CompanyEventUI.js';
 import { ProgressUI } from '../ui/ProgressUI.js';
+import { TasksUI } from '../ui/TasksUI.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -55,6 +56,7 @@ export class GameScene extends Phaser.Scene {
     this.companyEventUI = new CompanyEventUI(this, this.player, this.company.events);
     this.districtUI = new DistrictUI(this, gameState, this.player, this.orders, () => this.transitionDistrict());
     this.progressUI = new ProgressUI(this, gameState, this.player);
+    this.tasksUI = new TasksUI(this, gameState, this.player);
     if (import.meta.env.DEV) setupDevelopmentCheats(this, gameState);
     this.objectiveMarker = new ObjectiveMarker(this, this.orders);
     this.orders.generate();

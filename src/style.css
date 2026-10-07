@@ -189,6 +189,13 @@ body:has(dialog[open]) .interact { display: none; }
 .achievement-filters button[aria-pressed="false"] { background: #ffffff12; color: #eef4e7; }
 #progress-title-select { width: 100%; min-width: 0; min-height: 44px; font-size: 16px; margin: 8px 0; padding: 8px; color: #eef4e7; background: #263c38; border-radius: 8px; }
 #achievement-toast { position: fixed; z-index: 20; right: 12px; bottom: calc(160px + env(safe-area-inset-bottom)); width: min(340px, calc(100vw - 24px)); padding: 12px; border: 1px solid #f0b65c; border-radius: 12px; background: #263c38f5; color: #ffe6a9; font-size: 12px; line-height: 1.5; white-space: pre-line; pointer-events: none; }
+#task-toast { position: fixed; z-index: 19; left: 12px; bottom: calc(168px + env(safe-area-inset-bottom)); width: min(300px, calc(100vw - 24px)); padding: 10px; border: 1px solid #c4df8c; border-radius: 10px; background: #182b29f5; color: #eef4e7; font-size: 12px; line-height: 1.4; pointer-events: none; }
+.task-card progress { display: block; width: 100%; accent-color: #c4df8c; }
+.task-card { margin: 12px 0; }
+.task-card button { width: 100%; }
+#delivery-streak { color: #ffda91; font-weight: bold; }
+@media (max-width: 900px) { #task-toast { bottom: calc(255px + env(safe-area-inset-bottom)); width: min(240px, calc(100vw - 24px)); } }
+@media (max-height: 450px) { #task-toast { left: 12px; bottom: 12px; max-width: 230px; } }
 #magnate-celebration { border: 1px solid #f0b65c; border-radius: 12px; padding: 16px; margin-bottom: 16px; line-height: 1.6; background: #344539; }
 #magnate-celebration h3 { color: #ffe6a9; }
 @media (max-height: 450px) { #achievement-toast { bottom: 12px; max-width: 280px; } }

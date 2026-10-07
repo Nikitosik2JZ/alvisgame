@@ -103,7 +103,12 @@ export class EventManager {
       if (effects.money > 0 && this.orders.getTarget()) this.orders.order.eventIncome = (this.orders.order.eventIncome || 0) + actual;
       lines.push(effects.money < 0 ? `ШТРАФ: ${-effects.money} ₽\nСписано: ${actual} ₽${actual < -effects.money ? '\nБаланс исчерпан' : ''}` : `БОНУС / ЧАЕВЫЕ: +${actual} ₽`);
     }
-    if (effects.reputation) { effects.reputation = reputationReward(this.state.values, effects.reputation); this.state.update({ reputation: s.reputation + effects.reputation }); lines.push(`РЕПУТАЦИЯ: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}`); }
+    if (effects.reputation) {
+      effects.reputation = reputationReward(this.state.values, effects.reputation);
+      this.state.tasks.gameplayEvent(effects.reputation > 0 ? 'reputation' : 'negativeReputation', { amount: effects.reputation });
+      if (effects.reputation < 0 && this.orders.order) this.orders.order.negativeReputation = true;
+      this.state.update({ reputation: s.reputation + effects.reputation }); lines.push(`РЕПУТАЦИЯ: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}`);
+    }
     const order = this.orders.getTarget() ? this.orders.order : null;
     if (effects.time) {
       if (order) { order.deadline -= effects.time * 1000; lines.push(`ВРЕМЯ ЗАКАЗА: −${effects.time} сек.`); }
@@ -133,6 +138,8 @@ export class EventManager {
     this.negativeStreak = bad ? this.negativeStreak + 1 : 0;
     if (bad && event.rarity === 'VERY_RARE') this.lastRareNegative = this.serial + 1;
     this.serial++; this.lastId = event.id;
+    if (event.category === 'POSITIVE' && !bad) this.state.tasks.gameplayEvent('positiveEvent');
+    if (event.category === 'CHOICE' && !bad) this.state.tasks.gameplayEvent('choiceSuccess');
     this.state.progression.event({ ...outcome, friesHonest: event.id === 'fries' && choice === 0,
       rarity: event.rarity, positive: event.category === 'POSITIVE', bad: Boolean(bad) });
     this.history.unshift({ title: event.title, text: lines.join('\n') || 'Обычная доставка. Без штрафов.', bad: Boolean(bad) });

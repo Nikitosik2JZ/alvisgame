@@ -122,6 +122,8 @@ export class ProgressUI extends ModalUI {
       ['Расстояние доставок', `${number(s.totalDistanceDelivered)} м`], ['Редкие события', number(s.eventCounters.rareEvents)] ];
     const addRows = entries => { const dl = el('dl', undefined, 'company-summary'); for (const [label, value] of entries) dl.append(el('dt', label), el('dd', value)); this.content.append(dl); };
     addRows(rows);
+    addRows([['Лучшая серия доставок', number(s.bestDeliveryStreak)], ['Ежедневных заданий выполнено', number(s.dailyTasksCompleted)],
+      ['Челленджей выполнено', number(s.totalChallengesCompleted)], ['Особых заданий выполнено', number(s.rotatingChallengesCompleted)]]);
     this.content.append(el('p', `Рекорд скорости: успешный маршрут от ${RECORD_SETTINGS.minimumRouteMeters} м. Время с принятия заказа, включая ожидание и события.`, 'modal-note'), el('h3', 'РЕКОРДЫ КОМПАНИИ'));
     addRows([['Рекорд дохода / мин.', `${number(s.companyStats.highestIncomePerMinute)} ₽`], ['Доход за всё время', `${number(s.companyLifetimeEarnings)} ₽`],
       ['Сотрудников одновременно', number(c.mostEmployees)], ['Максимальный уровень сотрудника', number(c.highestEmployeeLevel)], ['Лучший доход сотрудника', `${number(c.bestEmployeeEarnings)} ₽`]]);

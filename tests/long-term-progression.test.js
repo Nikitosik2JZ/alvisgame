@@ -107,7 +107,7 @@ test('legacy insufficient/duplicate purchases are atomic; all five effects survi
 test('legacy XP and fractional reputation affect actual delivery credits while fines remain unchanged', () => {
   const s = new GameState(); s.values.legacyPoints = 3; s.progression.buyLegacy('experience'); s.progression.buyLegacy('reputation');
   for (let i = 0; i < 20; i++) deliver(s, { xpReward: 100 });
-  assert.equal(s.values.xp, 2060); assert.equal(s.values.reputation, 21);
+  assert.equal(s.values.xp, 2100); assert.equal(s.values.reputation, 24); // 40 XP / 3 reputation from capped streak milestones, without Legacy amplification.
   assert.ok(s.values.reputationRewardRemainder < 1e-6);
   const before = s.values.reputation; s.failOrder(2); assert.equal(s.values.reputation, before - 2);
 });
@@ -116,7 +116,7 @@ test('small XP rewards retain the exact 3% bonus across save/load rather than ro
   for (let i = 0; i < 10; i++) deliver(s, { xpReward: 10 });
   s = reload(s);
   for (let i = 0; i < 10; i++) deliver(s, { xpReward: 10 });
-  assert.equal(s.values.xp, 206); assert.ok(s.values.xpRewardRemainder < 1e-6);
+  assert.equal(s.values.xp, 246); assert.ok(s.values.xpRewardRemainder < 1e-6); // includes 40 direct streak XP.
 });
 test('legacy tips affect the real event payout, and completed order income includes separately credited event money', () => {
   const s = new GameState(); s.values.legacyPoints = 3; s.progression.buyLegacy('tips');

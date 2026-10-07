@@ -5,6 +5,7 @@ import { DISTRICTS, DISTRICT_MASTERY, ELITE_ORDERS } from '../config/districtCon
 import { CAREER_MILESTONES } from '../config/progressionConfig.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { normalizeEmployee } from '../state/companyState.js';
+import { localTaskDate } from '../config/taskConfig.js';
 
 export function setupDevelopmentCheats(scene, state) {
   if (!import.meta.env.DEV) return;
@@ -18,6 +19,16 @@ export function setupDevelopmentCheats(scene, state) {
     return state.unlockDistrict(id);
   };
   const debug = {
+    tasks: {
+      regenerate: () => { state.values.dailyTaskDate = null; state.tasks.checkDate(); },
+      completeDaily: (index = 0) => { const task = state.values.dailyTasks[index]; if (!task) return false; task.currentProgress = task.target; state.tasks.complete(task); state.refresh(); return true; },
+      completeAll: () => { for (const task of state.values.dailyTasks) { task.currentProgress = task.target; state.tasks.complete(task); } state.refresh(); },
+      nextDay: () => { const date = new Date(`${state.tasks.effectiveDate}T12:00:00`); date.setDate(date.getDate() + 1); const next = localTaskDate(date); state.tasks.date = () => next; state.tasks.checkDate(); },
+      setStreak: (count = 5) => { if (!Number.isSafeInteger(count) || count < 0) return false; state.values.currentDeliveryStreak = count; state.values.bestDeliveryStreak = Math.max(state.values.bestDeliveryStreak, count); state.refresh(); return true; },
+      resetStreak: () => { state.tasks.failure(); state.refresh(); },
+      completeRotating: () => { const task = state.values.rotatingChallenge; if (!task) return false; task.currentProgress = task.target; state.tasks.complete(task); state.refresh(); return true; },
+      claimBonus: () => state.tasks.claimDailyBonus(),
+    },
     progression: {
       addLegacy: (amount = 1) => { if (Number.isSafeInteger(amount) && amount > 0) { state.values.legacyPoints += amount; state.values.legacyPointsEarned += amount; state.refresh(); } },
       setLifetimeEarnings: (personal, company = state.values.companyLifetimeEarnings) => {

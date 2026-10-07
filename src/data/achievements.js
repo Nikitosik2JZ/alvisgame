@@ -3,6 +3,11 @@ import { DISTRICTS, DISTRICT_MASTERY } from '../config/districtConfig.js';
 export const ACHIEVEMENT_CATEGORIES = ['ДОСТАВКИ', 'ДЕНЬГИ', 'ТРАНСПОРТ', 'РЕПУТАЦИЯ', 'РАЙОНЫ', 'КОМПАНИЯ', 'СОБЫТИЯ', 'СЕКРЕТНЫЕ'];
 const a = (id, title, description, category, source, target, reward = {}, hidden = false) => ({ id, title, description, category, source, target, reward, hidden });
 export const ACHIEVEMENTS = [
+  a('streak-five', 'Разогрелся', 'Достигните серии из 5 доставок', 'ДОСТАВКИ', 'bestStreak', 5, { xp: 20 }),
+  a('streak-ten', 'Без ошибок', 'Достигните серии из 10 доставок', 'ДОСТАВКИ', 'bestStreak', 10, { xp: 40 }),
+  a('daily-plan', 'Всё по плану', 'Выполните все ежедневные задания за день', 'ДОСТАВКИ', 'dailySets', 1, { money: 100, xp: 15 }),
+  a('daily-worker', 'Трудовой день', 'Выполните 25 ежедневных заданий', 'ДОСТАВКИ', 'dailyTasks', 25, { xp: 60 }),
+  a('challenge-fan', 'Люблю челленджи', 'Выполните 10 особых и сессионных челленджей', 'ДОСТАВКИ', 'challenges', 10, { xp: 60 }),
   a('first-order', 'Первый заказ', 'Выполните 1 доставку', 'ДОСТАВКИ', 'deliveries', 1, { money: 50, xp: 10 }),
   a('pace', 'Набираю темп', 'Выполните 25 доставок', 'ДОСТАВКИ', 'deliveries', 25, { money: 200, xp: 30 }),
   a('work', 'Работа есть работа', 'Выполните 100 доставок', 'ДОСТАВКИ', 'deliveries', 100, { money: 400, xp: 60 }),

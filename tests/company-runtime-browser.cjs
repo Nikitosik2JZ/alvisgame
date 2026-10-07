@@ -56,7 +56,7 @@ const assert = require('node:assert/strict');
     await offline.addInitScript(data => localStorage.setItem('courier-empire-save-v1', JSON.stringify(data)), saved);
     await offline.goto(process.env.PREVIEW_URL || 'http://127.0.0.1:5176'); await offline.waitForSelector('#company-offline:not([hidden])');
     let stored = await offline.evaluate(() => JSON.parse(localStorage.getItem('courier-empire-save-v1')));
-    assert.equal(stored.version, 9); assert.ok(stored.companyBalance >= 5036 && stored.companyBalance <= 5040);
+    assert.equal(stored.version, 10); assert.ok(stored.companyBalance >= 5036 && stored.companyBalance <= 5040);
     assert.ok(stored.employees[0].level > 1); assert.equal(stored.companyStats.negativeEvents, 0); assert.equal(stored.companyStats.employeeFailures, 0);
     await offline.click('#company-offline-collect'); assert.match(await offline.locator('#company-summary').textContent(), /1 \/ 2/);
     assert.ok(Number((await offline.locator('#money').textContent()).replace(/\D/g, '')) >= 6036);

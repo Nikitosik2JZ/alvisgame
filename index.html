@@ -22,6 +22,7 @@
         <span><span class="stat-label">Деньги:</span> <strong id="money">0 ₽</strong></span>
         <span><span class="stat-label">Ур.</span> <strong id="level">1</strong></span>
         <span><span class="stat-label">Реп.</span> <strong id="reputation">0</strong></span>
+        <span id="delivery-streak" hidden aria-label="Текущая серия доставок"></span>
       </div>
       <div id="xp" class="xp">0 / 100 XP</div>
       <nav class="hud-actions" aria-label="Прогресс курьера">
@@ -31,6 +32,7 @@
         <button id="open-events">СОБЫТИЯ<small>История</small></button>
         <button id="open-company">КОМПАНИЯ<small>Свой бизнес</small></button>
         <button id="open-progress">ПРОГРЕСС<small>Карьера и наследие</small></button>
+        <button id="open-tasks"><span>ЗАДАНИЯ</span><small>Цели и челленджи</small></button>
       </nav>
       <div id="current-transport" class="xp"></div>
       <div id="transport-goal" class="progression-goal"></div>
@@ -157,6 +159,16 @@
         <div id="progress-content"></div>
       </div>
     </dialog>
+    <dialog id="tasks-dialog" class="progression-dialog" aria-labelledby="tasks-heading">
+      <div class="modal-header"><h2 id="tasks-heading">ЗАДАНИЯ</h2><button data-close>ЗАКРЫТЬ ×</button></div>
+      <div class="modal-content">
+        <nav class="company-tabs" aria-label="Разделы заданий">
+          <button data-task-view="daily">ЕЖЕДНЕВНЫЕ</button><button data-task-view="challenges">ЧЕЛЛЕНДЖИ</button><button data-task-view="streak">СЕРИЯ</button>
+        </nav>
+        <p id="tasks-feedback" role="status" aria-live="polite"></p><div id="tasks-content"></div>
+      </div>
+    </dialog>
+    <aside id="task-toast" role="status" aria-live="polite" hidden></aside>
     <aside id="achievement-toast" role="status" aria-live="polite" hidden></aside>
     <aside id="transport-milestone" role="status" aria-live="polite" hidden></aside>
     <script type="module" src="/src/main.js"></script>

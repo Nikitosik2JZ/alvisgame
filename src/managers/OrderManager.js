@@ -172,6 +172,7 @@ export class OrderManager {
       const payout = calculateDeliveryReward(this.order.reward, this.state.getSnapshot(), this.order);
       const before = this.state.getSnapshot();
       this.state.addRewards({ ...this.order, reward: payout.total, elapsedSeconds: (this.now() - this.order.acceptedAt) / 1000,
+        remainingSeconds: Math.max(0, (this.order.deadline - this.now()) / 1000),
         orderMoney: payout.total + (this.order.eventIncome || 0) });
       const after = this.state.getSnapshot();
       this.order.actualXpReward = after.xp - before.xp; this.order.actualReputationReward = after.reputation - before.reputation;

@@ -37,7 +37,7 @@ const seed = { version: 8, money: 111111, xp: 6000, reputation: 100, completedOr
       await open('progress');
       assert.equal(await page.locator('[data-progress-view]').count(), 4);
       assert.equal(await page.locator('.progress-card').count(), 10);
-      assert.match(await page.locator('#progress-summary').textContent(), /32/);
+      assert.match(await page.locator('#progress-summary').textContent(), /37/);
       assert.match(await page.locator('#progress-content').textContent(), /ГЛАВНАЯ ЦЕЛЬ/);
       const pos = await page.evaluate(() => ({ x: scene.player.x, y: scene.player.y }));
       await page.keyboard.down('d'); await page.waitForTimeout(200); await page.keyboard.up('d');
@@ -126,7 +126,7 @@ const seed = { version: 8, money: 111111, xp: 6000, reputation: 100, completedOr
       await page.click('#magnate-continue'); await page.locator('[data-claim="magnate"]').click();
       await page.click('[data-progress-view="legacy"]'); await page.locator('[data-legacy="experience"] button').click();
       const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), key);
-      assert.equal(saved.version, 9); assert.equal(saved.legacyPoints, 4); assert.equal(saved.magnateCelebrationSeen, true);
+      assert.equal(saved.version, 10); assert.equal(saved.legacyPoints, 4); assert.equal(saved.magnateCelebrationSeen, true);
       assert.ok(saved.legacyUpgrades.includes('experience')); assert.equal(saved.employees.length, 8);
       await page.screenshot({ path: path.join(artifacts, `${viewport.width}-production.png`) });
       await page.reload(); await ready(); await open(); assert.equal(await page.locator('#magnate-celebration').isVisible(), false);

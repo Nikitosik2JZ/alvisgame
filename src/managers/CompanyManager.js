@@ -252,6 +252,7 @@ export class CompanyManager {
     this.tick(); const s = this.state.values, amount = s.companyBalance;
     if (amount <= 0) return { ok: false, reason: 'Доход пока не накоплен' };
     s.money += amount; s.companyBalance = 0; s.companyStats.totalIncomeCollected += amount;
+    this.state.tasks.gameplayEvent('companyCollect', { amount });
     this.offlineEarned = 0; this.log(`Забрано ${amount} ₽ дохода компании.`); this.state.refresh(); return { ok: true, amount };
   }
   upgrade() {
