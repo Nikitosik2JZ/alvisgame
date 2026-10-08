@@ -1,8 +1,14 @@
 # Courier Empire / Курьерская Империя
 
+## Version 1.0.0 — Yandex 1.0.0.0 Release Candidate
+
+Stage 12 adds a one-time skippable RU/EN gameplay tutorial, persisted sound settings and six original synthesized SFX, brief reward effects, responsive layout fixes and a centralized economy balance pass. Existing visuals and progression systems remain. Save schema is **12**; veteran saves migrate without a tutorial interruption.
+
+Release evidence and remaining manual checks: [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), [YANDEX_FINAL_AUDIT.md](YANDEX_FINAL_AUDIT.md), [BALANCE_REPORT.md](BALANCE_REPORT.md), [MINIMUM_REQUIREMENTS.md](MINIMUM_REQUIREMENTS.md). [POST_RELEASE_IDEAS.md](POST_RELEASE_IDEAS.md) contains deferred work. Run `npm run balance` for the expected-value economy model and `npm run test:release` for Chrome UI/SDK-double checks (requires playwright-core and Chrome paths below). The modern and legacy bundles are both included; old device compatibility remains a physical-device acceptance check.
+
 ## Stage 11: Yandex Games integration
 
-Stage 11 now includes a complete **Russian/English localization pass**. See [LOCALIZATION_AUDIT.md](LOCALIZATION_AUDIT.md) for the audit, migration and test results, and [LOCALIZATION_GLOSSARY.md](LOCALIZATION_GLOSSARY.md) for terminology. Stage 12 has not begun.
+Stage 11 included the initial **Russian/English localization pass**. See [LOCALIZATION_AUDIT.md](LOCALIZATION_AUDIT.md) for historical results and [LOCALIZATION_GLOSSARY.md](LOCALIZATION_GLOSSARY.md) for terminology. Current release results are in the Stage 12 reports above.
 
 Test local languages with `npm run dev`, then `http://localhost:5173/?lang=ru` or `?lang=en`. The URL override is compiled out of production language selection. Production uses SDK language: ru/be/kk/uk/uz → ru; en and all other codes → en. Local without SDK defaults to ru. `npm run build` also validates both dictionaries, interpolation parameters and source/HTML/CSS text; `npm run test:localization` runs the focused checks.
 
@@ -29,7 +35,7 @@ The build uses relative asset paths and checks root `index.html`, ASCII/no-space
 
 **YANDEX mode:** production archive loading uses `/sdk.js`, then `YaGames.init()`. SDK methods live only in `PlatformService`. The main entry obtains SDK/Player and initializes localization; BootScene selects/migrates progress and starts company resources before GameScene becomes interactive. After the first scene render, the loading overlay is removed and `LoadingAPI.ready()` is called once. `LifecycleManager` drives idempotent GameplayAPI start/stop and freezes order/effect/company active clocks for menus, platform events, ads, authorization and visibility loss.
 
-`SaveManager` chooses valid cloud progress first; empty cloud permits a scoped local backup or a one-time migration from the original flat local save. Local storage remains a synchronous backup. Cloud data wraps the existing GameState serializer as `{saveVersion, revision, savedAt, gameState}` under `courierEmpire`. Writes debounce for 1.5 seconds, stay at least 5 seconds apart, and batch passive company changes for 30 seconds. Failed cloud reads block writes for that session. Account selection suspends synchronization and reloads with the newly acquired Player; previous-account data is never imported into a selected empty account.
+`SaveManager` chooses valid cloud progress first unless the current account's local backup has both a newer revision and an equal/newer timestamp; empty cloud permits a scoped local backup or a one-time migration from the original flat local save. Local storage remains a synchronous backup. Cloud data wraps the existing GameState serializer as `{saveVersion, revision, savedAt, gameState}` under `courierEmpire`. Writes debounce for 1.5 seconds, stay at least 5 seconds apart, and batch passive company changes for 30 seconds. Failed cloud reads block writes for that session. Account selection suspends synchronization and reloads with the newly acquired Player; previous-account data is never imported into a selected empty account.
 
 Fullscreen interstitials are considered only when **ПРОДОЛЖИТЬ** is pressed after a finished/failed order: four successful orders since the preceding request, 180 active seconds before the first request, and 180 active seconds between requests. There is no manual startup ad and no interval-driven advertising. Successful personal deliveries optionally offer **+50% of their final delivery payment**, rounded down, through **СМОТРЕТЬ РЕКЛАМУ**. Only `onRewarded` credits money, with no XP/reputation; one persisted attempt per result prevents duplicates. Continue is always available without watching an ad.
 
@@ -61,7 +67,7 @@ Open the URL printed by Vite. The dev server supports phone testing over the sam
 
 ## Controls and gameplay
 
-- Move with WASD / arrows. Touch devices or narrow screens show direction buttons; holding two allows normalized diagonal movement.
+- Move with WASD / arrows. Touch devices or narrow screens show an analog joystick with normalized 360° movement.
 - Click **ПРИНЯТЬ** to accept the offer. Orders are never automatically accepted; offers do not expire.
 - Follow the yellow restaurant ring and edge arrow. HUD shows distance and remaining time.
 - Within 60 pixels of the entrance, press **E** or **ЗАБРАТЬ ЗАКАЗ**.

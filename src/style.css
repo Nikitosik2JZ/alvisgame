@@ -1,4 +1,18 @@
 :root { font-family: Arial, sans-serif; color: #eef4e7; background: #182b29; font-synthesis: none; }
+/* Base values survive browsers that cannot parse min(), env() or dvh. */
+.hud { top: 20px; left: 20px; }
+.order-panel { top: 20px; right: 20px; }
+.progression-dialog { width: 90%; max-width: 620px; max-height: calc(100vh - 24px); }
+.modal-content { max-height: calc(100vh - 104px); }
+#result-actions { max-height: 330px; }
+#result { max-height: 150px; }
+.touch-controls { left: 16px; bottom: 16px; width: 108px; height: 108px; }
+.interact { right: 20px; bottom: 155px; }
+#tutorial { bottom: 72px; width: 90%; max-width: 440px; }
+.compact .hud { top: 8px; left: 8px; right: 8px; }
+.compact .order-panel { top: 70px; left: 8px; right: 8px; max-height: calc(100vh - 234px); }
+.compact .order-panel[data-mode="offer"] { bottom: 152px; }
+.compact .interact { bottom: 24px; right: 16px; max-width: calc(100vw - 164px); }
 * { box-sizing: border-box; }
 html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
 html, body { overscroll-behavior: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -215,4 +229,65 @@ body:has(dialog[open]) .interact { display: none; }
 
 .compact .order-panel[data-mode="result"] #result { max-height: 64px; overflow-y: auto; touch-action: pan-y; white-space: pre-line; }
 .compact #result-actions p { margin: 4px 0; }
-.compact #result-actions button { min-height: 40px; padding: 8px 12px; }
+.compact #result-actions button { min-height: 44px; padding: 8px 12px; }
+
+/* Release polish keeps the established palette, cards and world artwork. */
+.modal-header h2, .company-summary dt, #profile-details dt { min-width: 0; overflow-wrap: anywhere; }
+.progression-dialog[open] { display: flex; flex-direction: column; }
+.modal-header { flex-shrink: 0; }
+.modal-content { min-height: 0; }
+.hud-actions button { min-width: 0; overflow-wrap: anywhere; }
+.order-panel { touch-action: pan-y; overscroll-behavior: contain; overflow-wrap: anywhere; }
+#tutorial { position: fixed; z-index: 25; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(440px, calc(100vw - 24px)); padding: 12px 14px; border: 1px solid #c4df8c; border-radius: 14px; background: #182b29f5; color: #eef4e7; line-height: 1.45; }
+.tutorial-heading { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+#tutorial h2 { margin: 0; font-size: 16px; min-width: 0; overflow-wrap: anywhere; }
+#tutorial p { margin: 8px 0; font-size: 13px; }
+#tutorial button { min-height: 44px; padding: 8px 12px; border: 1px solid #c4df8c; border-radius: 8px; background: #c4df8c; color: #182b29; font-weight: bold; touch-action: manipulation; cursor: pointer; flex-shrink: 0; }
+#tutorial [data-tutorial-skip] { background: #ffffff12; color: #eef4e7; font-size: 11px; }
+.tutorial-highlight { outline: 2px solid #c4df8c; outline-offset: 2px; }
+.compact #tutorial { top: var(--hud-bottom, 70px); left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); bottom: auto; transform: none; width: auto; max-width: 510px; max-height: calc(100dvh - 224px); overflow-y: auto; touch-action: pan-y; }
+.compact body.tutorial-active .order-panel { top: var(--tutorial-bottom, 244px); bottom: auto; max-height: calc(100dvh - var(--tutorial-bottom, 244px) - 148px - env(safe-area-inset-bottom)); }
+#volume-value { float: right; }
+#master-volume { width: 100%; min-height: 44px; accent-color: #c4df8c; }
+.mute-label { display: flex; align-items: center; gap: 12px; min-height: 48px; margin: 12px 0; }
+#sound-muted { width: 24px; height: 24px; accent-color: #c4df8c; }
+#money-popup { position: fixed; z-index: 26; top: 60%; left: 50%; pointer-events: none; color: #fff4da; background: #182b29d9; border-radius: 8px; padding: 8px 12px; font-size: 20px; font-weight: bold; }
+.money-rise { animation: money-rise 850ms ease-out forwards; }
+.success-pulse { animation: success-pulse 550ms ease-out; }
+.major-pulse { animation: major-pulse 650ms ease-out; }
+@keyframes money-rise { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -38px); } }
+@keyframes success-pulse { 45% { border-color: #c4df8c; box-shadow: 0 0 12px #c4df8c66; } }
+@keyframes major-pulse { 45% { border-color: #f0b65c; box-shadow: 0 0 12px #f0b65c66; } }
+@media (prefers-reduced-motion: reduce) { .money-rise { animation-duration: 150ms; } .success-pulse, .major-pulse { animation-duration: 150ms; } }
+@media (max-height: 450px) and (max-width: 1000px) {
+  .compact body.tutorial-active .hud { width: 46%; right: auto; max-width: 360px; }
+  .compact #tutorial { top: calc(8px + env(safe-area-inset-top)); left: auto; right: calc(8px + env(safe-area-inset-right)); width: 46%; max-height: calc(100dvh - 108px - env(safe-area-inset-bottom)); }
+  .compact body.tutorial-active .order-panel { top: var(--hud-bottom, 70px); left: calc(8px + env(safe-area-inset-left)); right: auto; width: 46%; max-width: 360px; max-height: calc(100dvh - var(--hud-bottom, 70px) - 132px); }
+}
+body.game-paused .touch-controls { opacity: .3; pointer-events: none; }
+body.game-paused .interact { display: none; }
+.legacy-css .modal-header { display: flex; }
+.legacy-css .modal-header > button { margin-left: 8px; }
+.legacy-css .modal-content { overflow-y: auto; }
+.legacy-css .shop-item { margin-bottom: 12px; }
+.legacy-css .company-tabs, .legacy-css #menu-actions .hud-actions { display: flex; flex-wrap: wrap; }
+.legacy-css .company-tabs button, .legacy-css #menu-actions .hud-actions button { width: 48%; margin: 1%; }
+.legacy-css .company-summary, .legacy-css #profile-details { display: block; }
+.legacy-css .company-summary dd, .legacy-css #profile-details dd { margin: 4px 0 12px; text-align: left; }
+.legacy-css .compact #order-offer { display: block; }
+.legacy-css .compact #accept-order { width: 100%; }
+.legacy-css #event-buttons button, .legacy-css #company-event-buttons button { margin-bottom: 12px; }
+.legacy-css .stats > span { margin-right: 8px; }
+.legacy-css .compact #tutorial { top: 70px; bottom: auto; max-height: calc(100vh - 224px); }
+.legacy-css .compact body.tutorial-active .order-panel { top: 260px; bottom: auto; }
+.legacy-css #loading { display: flex; align-items: center; justify-content: center; }
+.legacy-css #task-toast, .legacy-css #achievement-toast { bottom: 160px; max-width: 300px; }
+.legacy-css #transport-milestone { max-width: 380px; width: 90%; }
+.legacy-css .transport-celebration h2 { font-size: 26px; }
+.legacy-css .hud, .legacy-css .order-panel, .legacy-css #tutorial, .legacy-css .guide, .legacy-css .controls-hint,
+.legacy-css #achievement-toast, .legacy-css #task-toast, .legacy-css #transport-milestone { background: #182b29; }
+.legacy-css .hud-actions button { margin: 4px; }
+.legacy-css .shop-item, .legacy-css .modal-content, .legacy-css #tutorial { word-wrap: break-word; }
+@media (min-width: 901px) and (pointer: fine) {
+  #game { max-width: 200vh; max-height: 200vw; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+}

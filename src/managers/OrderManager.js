@@ -46,15 +46,16 @@ export class OrderManager {
     for (const listener of this.listeners) listener(event, this.order, extra);
   }
 
-  generate({ forcedType, forcedVariant } = {}) {
+  generate({ forcedType, forcedVariant, tutorialOrigin } = {}) {
     if (this.order && ![ORDER_STATUS.DELIVERED, ORDER_STATUS.FAILED].includes(this.order.status)) return false;
     if (!this.restaurants.length || !this.customers.length) return false;
-    const restaurant = this.restaurants[Math.floor(this.random() * this.restaurants.length)];
+    const restaurant = tutorialOrigin ? [...this.restaurants].sort((a, b) => distance(a, tutorialOrigin) - distance(b, tutorialOrigin))[0]
+      : this.restaurants[Math.floor(this.random() * this.restaurants.length)];
     const snapshot = this.state.getSnapshot();
     const transport = transportFor(snapshot.equippedTransport);
     const district = DISTRICTS[snapshot.selectedDistrict || 'residential'];
     const candidates = [...this.customers].sort((a, b) => distance(restaurant, a) - distance(restaurant, b));
-    const nearby = this.state.nextCloseOrder;
+    const nearby = this.state.nextCloseOrder || Boolean(tutorialOrigin);
     const customerRoll = this.random();
     const types = Object.entries(ORDER_TYPES).filter(([id, config]) => snapshot.level >= config.level && (id === 'ELITE' ? eliteOrdersEligible(snapshot) : transport.allowedOrderTypes.includes(id))
       && (!config.requiredTransport || config.requiredTransport === transport.id));
@@ -106,6 +107,7 @@ export class OrderManager {
       deliveryTime: Math.round(clamp(Math.round(BALANCE.minDeliveryTime + meters / BALANCE.metersPerTimerSecond), BALANCE.minDeliveryTime, BALANCE.maxDeliveryTime) * (variant?.timer || config.timer)),
       status: ORDER_STATUS.AVAILABLE,
     };
+    if (tutorialOrigin) this.order.deliveryTime = Math.max(120, this.order.deliveryTime);
     this.state.nextCloseOrder = false;
     if (transport.id === 'CAR' && snapshot.largeOrderBoost) this.state.setLargeOrderBoost(0);
     this.emit('generated');

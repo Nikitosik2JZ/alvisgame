@@ -302,11 +302,11 @@ test('invalid/missing/future timestamps give no income and reset safely', () => 
   }
 });
 
-test('version 11 roundtrips all nested data and snapshots cannot mutate company values', () => {
+test('version 12 roundtrips all nested data and snapshots cannot mutate company values', () => {
   const f = fixture(); f.hire(); f.company.buyVehicle('CAR'); f.company.upgrade(); f.company.upgradeBranch('routing');
   f.advance(61500); f.company.tick(); trigger(f, 'good-day');
   const saved = JSON.parse(JSON.stringify(f.state.getSaveData())), loaded = new GameState(); loaded.loadSaveData(saved);
-  assert.equal(saved.version, 11); assert.deepEqual(loaded.getSaveData(), saved);
+  assert.equal(saved.version, 12); assert.deepEqual(loaded.getSaveData(), saved);
   const snapshot = f.state.getSnapshot(); snapshot.employees[0].name = 'X'; snapshot.companyCandidates[0].price = 0;
   snapshot.companyVehicles[0].type = 'X'; snapshot.companyUpgrades.routing = 99; snapshot.companyStats.employeeFailures = 999;
   snapshot.companyEffects[0].value = 99; snapshot.companyEventState.lastId = 'X'; snapshot.companyLog.push('fake');

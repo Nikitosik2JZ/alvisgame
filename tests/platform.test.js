@@ -73,7 +73,7 @@ test('cloud wins conflicts; empty cloud migrates existing local without combinin
     const state = new GameState(), saves = new SaveManager(state, f.platform, { clock: f.clock });
     const result = await saves.initialize(); assert.equal(state.values.money, cloud ? 70 : 900); assert.equal(result.source, cloud ? 'cloud' : 'local');
     assert.equal(f.calls.length, 0); assert.equal(await saves.flush(), true);
-    const envelope = f.calls.at(-1)[1][C.cloudKey]; assert.equal(envelope.saveVersion, 11); assert.equal(envelope.gameState.money, cloud ? 70 : 900);
+    const envelope = f.calls.at(-1)[1][C.cloudKey]; assert.equal(envelope.saveVersion, 12); assert.equal(envelope.gameState.money, cloud ? 70 : 900);
     saves.destroy();
   }
 });
@@ -85,7 +85,7 @@ test('guest and authorized cloud writes work; old local storage remains a flat b
   }
 });
 test('failed cloud/player load and unknown future schema never overwrite existing cloud', async () => {
-  for (const options of [{ cloudError: true }, { playerError: true }, { cloud: { saveVersion: 12, gameState: { version: 12, money: 100 } } }]) {
+  for (const options of [{ cloudError: true }, { playerError: true }, { cloud: { saveVersion: 13, gameState: { version: 13, money: 100 } } }]) {
     const f = fixture(options); await f.platform.initialize(); f.platform.writeLocal({ money: 88, xp: 0 });
     const saves = new SaveManager(new GameState(), f.platform, { clock: f.clock }); await saves.initialize();
     assert.equal(saves.cloudWritable, false); assert.equal(await saves.flush(), false); assert.equal(f.calls.length, 0); saves.destroy();

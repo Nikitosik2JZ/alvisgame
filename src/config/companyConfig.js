@@ -3,7 +3,7 @@ import { ECONOMY } from './economyConfig.js';
 
 export const COMPANY = Object.freeze({
   unlockLevel: 12,
-  unlockPrice: 40000,
+  unlockPrice: 165000,
   hireCost: 2500,
   defaultName: tr('company-config.001'),
   nameLimit: 20,

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { BALANCE } from '../src/config/gameBalance.js';
 import { GameState } from '../src/state/GameState.js';
 import { ShopManager } from '../src/managers/ShopManager.js';
 import { OrderManager } from '../src/managers/OrderManager.js';
@@ -24,7 +25,7 @@ test('shop APIs reject every vehicle without touching ownership or money', () =>
 test('double delivery counts one completed order, full route and payout; failure counts once', () => {
   let now = 0;
   const state = new GameState();
-  state.update({money:3500,xp:250});state.purchaseTransport('BICYCLE');
+  state.update({money:BALANCE.bicyclePrice,xp:250});state.purchaseTransport('BICYCLE');
   let calls = 0;
   const orders = new OrderManager({state,restaurants,customers,now:()=>now,random:()=>++calls===3?.99:0});
   orders.generate();assert.equal(orders.order.type,'DOUBLE');orders.accept();

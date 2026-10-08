@@ -93,7 +93,8 @@ export class PlatformService {
   async saveCloudData(save) {
     if (!this.player) return false;
     const data = { [C.cloudKey]: save };
-    if (new TextEncoder().encode(JSON.stringify(data)).length > C.cloudMaxBytes) return false;
+    // Blob computes UTF-8 bytes without TextEncoder (absent on older Safari).
+    if (new Blob([JSON.stringify(data)]).size > C.cloudMaxBytes) return false;
     try { const player = this.player; await withTimeout(player.setData(data, true)); return true; } catch { return false; }
   }
   gameReady() {

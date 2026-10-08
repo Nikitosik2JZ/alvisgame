@@ -5,11 +5,12 @@ export function decodeSave(raw) {
   const data = raw?.gameState ?? raw;
   if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
   const version = data.version ?? raw.saveVersion ?? 1;
-  if (raw.saveVersion != null && (!Number.isInteger(raw.saveVersion) || raw.saveVersion < 1 || raw.saveVersion > 11)) return null;
-  if (!Number.isInteger(version) || version < 1 || version > 11) return null;
+  if (raw.saveVersion != null && (!Number.isInteger(raw.saveVersion) || raw.saveVersion < 1 || raw.saveVersion > 12)) return null;
+  if (!Number.isInteger(version) || version < 1 || version > 12) return null;
   if (!['money', 'xp', 'completedOrders', 'ownedItems', 'ownedTransports', 'companyUnlocked'].some(k => Object.hasOwn(data, k))) return null;
   for (const key of ['money', 'xp', 'completedOrders']) if (data[key] !== undefined && (!Number.isFinite(data[key]) || data[key] < 0)) return null;
-  return { data, revision: Number.isSafeInteger(raw.revision) ? Math.max(0, raw.revision) : 0 };
+  return { data, revision: Number.isSafeInteger(raw.revision) ? Math.max(0, raw.revision) : 0,
+    savedAt: Number.isFinite(raw.savedAt) ? raw.savedAt : 0 };
 }
 
 export class SaveManager {
@@ -26,7 +27,11 @@ export class SaveManager {
         const raw = await this.platform.loadCloudSave(); cloud = decodeSave(raw);
         // Non-empty but unrecognized saves must never be replaced by defaults.
         this.cloudWritable = raw == null || Boolean(cloud);
-        if (cloud) selected = cloud;
+        if (cloud) {
+          // Only the current account's scoped backup may supersede its cloud.
+          // A failed/throttled write must not roll back purchases on reload.
+          selected = local && local.revision > cloud.revision && local.savedAt >= cloud.savedAt ? local : cloud;
+        }
         else if (raw == null && !selected && !this.accountReload) {
           const marker = this.platform.readLocal(`${this.platform.saveKey}:migrated`);
           if (!marker) {
@@ -48,15 +53,16 @@ export class SaveManager {
     this.initialized = true;
     this.request();
     this.unsubscribe = this.state.subscribe((snapshot, options) => this.request(options));
-    return { source: cloud ? 'cloud' : selected ? 'local' : 'new', cloudWritable: this.cloudWritable };
+    return { source: selected === cloud && cloud ? 'cloud' : selected ? 'local' : 'new', cloudWritable: this.cloudWritable };
   }
   snapshot() {
-    return { saveVersion: 11, revision: ++this.revision, savedAt: this.platform.getServerTime(), gameState: this.state.getSaveData() };
+    return { saveVersion: 12, revision: ++this.revision, savedAt: this.platform.getServerTime(), gameState: this.state.getSaveData() };
   }
   request({ minor = false } = {}) {
-    if (!this.initialized || this.blockers.size) return;
+    if (!this.initialized || this.blockers.size || this.settling) return;
     if (minor && this.clock() - this.lastMinor < C.minorSaveMs) return;
     if (minor) this.lastMinor = this.clock();
+    try { this.settling = true; this.settle?.(); } finally { this.settling = false; }
     this.pending = this.snapshot(); this.dirty = true;
     // Keep the existing flat LOCAL format, plus synchronization metadata.
     this.platform.writeLocal({ ...this.pending.gameState, revision: this.pending.revision, savedAt: this.pending.savedAt });

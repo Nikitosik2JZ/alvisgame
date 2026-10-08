@@ -66,10 +66,14 @@ export class CompanyUI extends ModalUI {
     this.onCompanyClose = () => { this.view = 'dashboard'; this.render(state.getSnapshot()); };
     this.dialog.addEventListener('close', this.onCompanyClose);
     this.unsubscribe = state.subscribe(snapshot => this.render(snapshot));
-    scene.events.once('shutdown', () => { this.unsubscribe(); this.dialog.removeEventListener('close', this.onCompanyClose); });
+    this.opener.addEventListener('click', this.onCompanyClose);
+    scene.events.once('shutdown', () => { this.unsubscribe(); this.dialog.removeEventListener('close', this.onCompanyClose); this.opener.removeEventListener('click', this.onCompanyClose); });
   }
 
   render(s) {
+    // Hidden company panels do not rebuild hundreds of DOM nodes every tick.
+    if (!this.dialog.open && this.rendered) return;
+    this.rendered = true;
     const special = ['celebration', 'offline'].includes(this.view), unlocked = s.companyUnlocked;
     for (const id of ['company-wallet', 'company-gameplay-note', 'company-feedback']) this.dialog.querySelector(`#${id}`).hidden = special;
     const current = companyLevel(s.officeLevel), next = COMPANY.levels.find(level => level.level === s.officeLevel + 1);

@@ -5,7 +5,7 @@ import { OrderManager } from '../src/managers/OrderManager.js';
 import { EventManager } from '../src/managers/EventManager.js';
 import { TemporaryModifiers } from '../src/managers/TemporaryModifiers.js';
 import { EVENTS } from '../src/data/events.js';
-import { ORDER_TYPES, reputationTier } from '../src/config/economyConfig.js';
+import { ORDER_TYPES, DISTRICTS, reputationTier } from '../src/config/economyConfig.js';
 import { restaurants, customers } from '../src/world/deliveryLocations.js';
 import { xpForLevel, BALANCE } from '../src/config/gameBalance.js';
 import { transportFor } from '../src/config/transportConfig.js';
@@ -17,9 +17,9 @@ function setup(type = 'STANDARD', district = 'residential') {
     const transport = transportFor(type === 'LARGE' ? 'CAR' : 'BICYCLE');
     state.update({ xp: xpForLevel(transport.requiredLevel), money: transport.purchasePrice }); state.purchaseTransport(transport.id);
   }
-  if (district === 'center') { state.update({ money: 3000 }); state.unlockDistrict('center'); state.selectDistrict('center'); }
+  if (district === 'center') { state.update({ money: DISTRICTS.center.cost }); state.unlockDistrict('center'); state.selectDistrict('center'); }
   if (type === 'ELITE') {
-    state.update({ xp: xpForLevel(12), reputation: 60, money: 18000 });
+    state.update({ xp: xpForLevel(12), reputation: 60, money: DISTRICTS.elite.cost });
     state.unlockDistrict('elite'); state.selectDistrict('elite');
   }
   const roll = { STANDARD: 0, URGENT: .7, FRAGILE: .9, DOUBLE: .99, LARGE: .99 }[type];
@@ -53,13 +53,13 @@ test('all order types preserve pickup, deadline and single final payment; double
 
 test('district purchase requires both level and money, costs once, and roundtrips with demand/old saves', () => {
   const state = new GameState(); state.update({ money: 5000 }); assert.equal(state.unlockDistrict('center'), false);
-  state.update({ xp: 450, money: 2999 }); assert.equal(state.unlockDistrict('center'), false);
-  state.update({ money: 3000 }); assert.equal(state.unlockDistrict('center'), true);
+  state.update({ xp: 450, money: DISTRICTS.center.cost - 1 }); assert.equal(state.unlockDistrict('center'), false);
+  state.update({ money: DISTRICTS.center.cost }); assert.equal(state.unlockDistrict('center'), true);
   assert.equal(state.getSnapshot().money, 0); assert.equal(state.unlockDistrict('center'), false);
   state.selectDistrict('center'); state.setDemand(3);
   const saved = state.getSaveData(), restored = new GameState(); restored.loadSaveData(saved);
   assert.deepEqual(restored.getSaveData(), saved);
-  assert.equal(saved.version, 11); assert.equal('active' in saved, false);
+  assert.equal(saved.version, 12); assert.equal('active' in saved, false);
   restored.loadSaveData({ version: 2, money: 20, reputation: 50 });
   assert.equal(restored.getSnapshot().selectedDistrict, 'residential'); assert.equal(restored.getSnapshot().demandBonusOrders, 0);
   restored.loadSaveData({ unlockedDistricts: ['nonsense', 'toString', '__proto__'], selectedDistrict: 'center', demandBonusOrders: Infinity });
@@ -98,14 +98,14 @@ test('negative streak, cooldown, no-repeat, bicycle and equipment requirements',
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'cola')), true);
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'puncture')), false);
   events.orders.order.status = 'DELIVERED'; // Vehicle changes now require finishing the active order.
-  state.update({ money: 3500 }); state.purchaseTransport('BICYCLE');
+  state.update({ money: BALANCE.bicyclePrice }); state.purchaseTransport('BICYCLE');
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'puncture')), true);
   events.orders.generate(); events.orders.accept();
   events.lastId = 'green'; events.debug('POSITIVE'); assert.notEqual(events.active.event.id, 'green'); events.resolve(); events.finish();
   const food = EVENTS.find(e => e.id === 'soup'), green = EVENTS.find(e => e.id === 'green');
   events.random = () => .3; events.negativeStreak = 0;
   assert.equal(events.weighted([food, green]).id, 'soup');
-  state.update({ money: 1200 }); state.purchaseItem('thermobag');
+  state.update({ money: BALANCE.thermobagPrice }); state.purchaseItem('thermobag');
   assert.equal(events.weighted([food, green]).id, 'green');
 });
 
@@ -171,12 +171,12 @@ test('positive ranges, high reputation tips, food deduction and modal pause rema
 
 test('configured probability buckets and fragile protection are deterministic', () => {
   const { events } = setup();
-  for (const [roll, rarity] of [[.1,'COMMON'],[.22,'UNCOMMON'],[.26,'RARE'],[.29,'VERY_RARE'],[.8,null]]) {
+  for (const [roll, rarity] of [[.1,'COMMON'],[.15,'UNCOMMON'],[.18,'RARE'],[.20,'VERY_RARE'],[.8,null]]) {
     events.random = () => roll; events.prepare(); assert.equal(events.pending?.rarity || null, rarity);
   }
   for (const bag of [false, true]) {
     const { events, orders, state } = setup('FRAGILE');
-    if (bag) { state.update({ money:1200 }); state.purchaseItem('thermobag'); }
+    if (bag) { state.update({ money:BALANCE.thermobagPrice }); state.purchaseItem('thermobag'); }
     events.random=()=>.04; events.trigger('customer');
     assert.equal(Boolean(events.active), !bag);
   }
@@ -214,7 +214,7 @@ test('positive, negative, choice, transport and district events still trigger fo
     const { state, orders, events } = setup();
     if (id === 'moped-route') {
       orders.order.status = 'DELIVERED';
-      state.update({ money: 10000, xp: xpForLevel(6) }); state.purchaseTransport('MOPED');
+      state.update({ money: BALANCE.mopedPrice, xp: xpForLevel(6) }); state.purchaseTransport('MOPED');
       orders.generate(); orders.accept(); orders.interact(orders.getTarget());
     }
     const event = EVENTS.find(e => e.id === id);

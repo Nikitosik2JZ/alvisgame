@@ -35,6 +35,7 @@
         <button id="open-progress"><span data-i18n="html.029"></span><small><span data-i18n="html.030"></span></small></button>
         <button id="open-tasks"><span><span data-i18n="tasks-ui.003"></span></span><small><span data-i18n="html.031"></span></small></button>
         <button id="open-rating"><span data-i18n="rating"></span><small><span data-i18n="html.032"></span></small></button>
+        <button id="open-settings"><span data-i18n="settings.title"></span><small data-i18n="settings.sound"></small></button>
       </nav>
       <div id="current-transport" class="xp"></div>
       <div id="transport-goal" class="progression-goal"></div>
@@ -60,6 +61,20 @@
       </div>
     </section>
     <button id="interact" class="interact" hidden><span data-i18n="order-ui.027"></span></button>
+    <aside id="tutorial" hidden aria-labelledby="tutorial-title">
+      <div class="tutorial-heading"><h2 id="tutorial-title"></h2><button data-tutorial-skip data-i18n="tutorial.skip"></button></div>
+      <p aria-live="polite"></p><button data-tutorial-next></button>
+    </aside>
+    <aside id="money-popup" hidden aria-hidden="true"></aside>
+    <dialog id="settings-dialog" class="progression-dialog" aria-labelledby="settings-title">
+      <div class="modal-header"><h2 id="settings-title" data-i18n="settings.title"></h2><button data-close data-i18n="html.036"></button></div>
+      <div class="modal-content">
+        <label for="master-volume" data-i18n="settings.volume"></label><output id="volume-value" for="master-volume"></output>
+        <input id="master-volume" type="range" min="0" max="100" step="1" />
+        <label class="mute-label"><input id="sound-muted" type="checkbox" /><span data-i18n="settings.mute"></span></label>
+        <p class="modal-note" data-i18n="settings.note"></p>
+      </div>
+    </dialog>
     <aside class="guide"><span class="status-dot"></span><span data-i18n="html.033"></span></aside>
     <footer class="controls-hint"><kbd>W A S D</kbd><kbd>↑ ← ↓ →</kbd><span><span data-i18n="html.034"></span></span></footer>
     <div id="joystick" class="touch-controls" role="group" data-i18n-aria-label="html.006"><span class="joystick-stick"></span></div>

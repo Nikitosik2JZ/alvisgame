@@ -67,7 +67,7 @@ export class GarageUI extends ModalUI {
     if (this.toastUntil && performance.now() < this.toastUntil) return;
     toast.hidden = true;
     if (document.querySelector('dialog[open]')) return;
-    const s = this.state.getSnapshot();
+    const s = this.state.values;
     const next = TRANSPORTS.find(t => t.milestoneTitle && s.level >= t.requiredLevel && !s.transportMilestones.includes(t.id) && !s.ownedTransports.includes(t.id));
     if (!next) return;
     this.state.markTransportMilestone(next.id);

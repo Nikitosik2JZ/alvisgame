@@ -145,6 +145,8 @@ export class CompanyManager {
     return this.offlineEarned;
   }
 
+  settleForSave() { if (!this.hidden) this.tick(); }
+
   tick() {
     const current = this.now(), elapsed = Math.max(0, current - this.lastTick);
     this.lastTick = current;

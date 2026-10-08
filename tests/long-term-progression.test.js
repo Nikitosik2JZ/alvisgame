@@ -58,7 +58,7 @@ test('malformed new fields sanitize known IDs and snapshots cannot mutate persis
 test('career milestone locks, completes, persists, claims once and keeps canonical status independent of cosmetic title', () => {
   const s = new GameState(), cyclist = CAREER_MILESTONES.find(m => m.id === 'cyclist');
   assert.equal(s.progression.status(cyclist, true), 'LOCKED');
-  s.update({ xp: xpForLevel(3), money: 3500 }); assert.ok(s.purchaseTransport('BICYCLE').ok);
+  s.update({ xp: xpForLevel(3), money: 7000 }); assert.ok(s.purchaseTransport('BICYCLE').ok);
   assert.equal(s.progression.status(cyclist, true), 'IN_PROGRESS');
   for (let i = 0; i < 15; i++) deliver(s);
   assert.equal(s.progression.status(cyclist, true), 'COMPLETED'); assert.equal(careerTitle(s.values), 'Велокурьер');
@@ -131,7 +131,7 @@ test('legacy tips affect the real event payout, and completed order income inclu
 });
 test('company bonus applies online/offline and settles elapsed income before upgrade at the old rate', () => {
   const s = new GameState(); let now = 0;
-  s.update({ xp: xpForLevel(12), money: 50000 }); const c = new CompanyManager(s, { now: () => now, random: () => .5 });
+  s.update({ xp: xpForLevel(12), money: 500000 }); const c = new CompanyManager(s, { now: () => now, random: () => .5 });
   c.openCompany('Test'); c.hire(); const rate = c.incomeRate();
   s.values.legacyPoints = 2; now = 30000; s.progression.buyLegacy('business');
   assert.equal(s.values.companyLifetimeEarnings, Math.floor(rate / 2));
@@ -181,15 +181,15 @@ test('each Magnate requirement gates independently, secret achievements never sa
 });
 test('main goal changes after transport and district unlocks, then suggests remaining long-term achievements', () => {
   const s = new GameState(); assert.match(s.progression.suggestedGoal().title, /велосипед/);
-  s.update({ money: 100000, xp: xpForLevel(14), reputation: 100 });
+  s.update({ money: 2000000, xp: xpForLevel(14), reputation: 100 });
   s.purchaseTransport('BICYCLE'); assert.match(s.progression.suggestedGoal().title, /мопед/);
   s.purchaseTransport('MOPED'); s.purchaseTransport('CAR');
   assert.match(s.progression.suggestedGoal().title, /Центр/);
-  assert.ok(s.progression.suggestedRequirements().some(r => r.source === 'wallet' && r.target === 3000));
-  s.values.money = 100000;
+  assert.ok(s.progression.suggestedRequirements().some(r => r.source === 'wallet' && r.target === DISTRICTS.center.cost));
+  s.values.money = 2000000;
   for (const id of Object.keys(DISTRICTS).slice(1)) assert.ok(s.unlockDistrict(id));
   assert.match(s.progression.suggestedGoal().title, /компанию/);
-  const c = new CompanyManager(s); s.values.money = 100000; c.openCompany('Test');
+  const c = new CompanyManager(s); s.values.money = 2000000; c.openCompany('Test');
   assert.match(s.progression.suggestedGoal().title, /Пеший курьер/);
   s.values.careerMilestones = CAREER_MILESTONES.map(m => m.id);
   s.values.completedOrders = 100; s.values.totalMoneyEarned = 500000; s.values.companyLifetimeEarnings = 1000000;

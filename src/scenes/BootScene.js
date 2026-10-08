@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { platformService } from '../services/PlatformService.js';
-import { initializeRuntime, destroyRuntime } from '../services/GameRuntime.js';
+import { initializeRuntime, destroyRuntime, saves } from '../services/GameRuntime.js';
 import { lifecycle } from '../services/LifecycleManager.js';
 import { gameState } from '../state/GameState.js';
 import { transportFor } from '../config/transportConfig.js';
@@ -15,6 +15,7 @@ export class BootScene extends Phaser.Scene {
     await initializeRuntime();
     this.game.company = new CompanyManager(gameState, { now: lifecycle.now, wallNow: () => platformService.getServerTime(), lifecycle });
     this.game.company.start();
+    saves.settle = () => this.game.company.settleForSave();
     this.game.events.once('destroy', () => { this.game.company.destroy(); destroyRuntime(); });
     // Original courier texture, drawn locally with Phaser shapes.
     const graphics = this.make.graphics({ x: 0, y: 0 });

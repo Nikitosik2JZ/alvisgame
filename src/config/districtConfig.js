@@ -16,7 +16,7 @@ export const DISTRICTS = {
     eventWeights: { 'yard-dog': 3, traffic: .5, parking: .5 },
     visual: { ground: 0x8ca77b, road: 0x596967, sidewalk: 0xd1ceba, building: 0xa8b9ad, park: 0x769569 },
   }),
-  center: district(tr('district-config.004'), 4, 3000, 1.3, 1.15, {
+  center: district(tr('district-config.004'), 4, 6500, 1.3, 1.15, {
     event: 1.15, companyBonus: .02, transportPoolExtension: .33, routeRange: [180, 700], recommendedTransports: ['BICYCLE', 'MOPED'],
     description: tr('district-config.005'),
     orderSummary: tr('district-config.006'),
@@ -24,7 +24,7 @@ export const DISTRICTS = {
     eventWeights: { 'street-closed': 3, traffic: 1.5, parking: 1.5 },
     visual: { ground: 0x9b9da6, road: 0x505e6c, sidewalk: 0xd2d0c8, building: 0x8996b4, park: 0x769569 },
   }),
-  industrial: district(tr('district-config.007'), 7, 8000, 1.55, 1.3, {
+  industrial: district(tr('district-config.007'), 7, 24000, 1.55, 1.3, {
     tip: .75, event: 1.2, companyBonus: .03, routeRange: [450, 1050], recommendedTransports: ['MOPED', 'CAR'],
     description: tr('district-config.008'),
     orderSummary: tr('district-config.009'),
@@ -32,7 +32,7 @@ export const DISTRICTS = {
     eventWeights: { 'industrial-security': 3, 'empty-roads': 2, 'moped-fuel': 1.8, puncture: 1.5, generous: .6, 'big-tips': .6 },
     visual: { ground: 0x8b8678, road: 0x515550, sidewalk: 0xb7b1a2, building: 0x9e8b6c, park: 0x817e6a },
   }),
-  elite: district(tr('district-config.010'), 10, 18000, 1.7, 1.35, {
+  elite: district(tr('district-config.010'), 10, 60000, 1.7, 1.35, {
     reputation: 40, tip: 1.8, event: 1.25, reputationBonus: 1, failureMultiplier: 2, companyBonus: .04,
     routeRange: [220, 650], recommendedTransports: ['BICYCLE', 'MOPED', 'CAR'],
     description: tr('district-config.011'),
@@ -41,7 +41,7 @@ export const DISTRICTS = {
     eventWeights: { 'elite-security': 3, 'elite-tips': 3, generous: 1.8, 'big-tips': 1.8, principled: 2 },
     visual: { ground: 0x87ae86, road: 0x637977, sidewalk: 0xe3ddc8, building: 0xe0cda2, park: 0x679e72 },
   }),
-  business: district(tr('district-config.013'), 14, 45000, 2, 1.5, {
+  business: district(tr('district-config.013'), 14, 140000, 2, 1.5, {
     reputation: 70, requiredOwnedTransports: ['MOPED', 'CAR'], tip: 1.25, event: 1.4,
     reputationBonus: 1, failureMultiplier: 2, companyBonus: .05,
     routeRange: [550, 1100], recommendedTransports: ['MOPED', 'CAR'],

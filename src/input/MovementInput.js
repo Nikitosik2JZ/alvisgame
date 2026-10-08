@@ -16,6 +16,7 @@ export class MovementInput {
     this.config = config;
     this.isBlocked = isBlocked;
     this.base = document.querySelector('#joystick');
+    this.base.setAttribute('touch-action', 'none');
     this.stick = this.base.querySelector('.joystick-stick');
     this.vector = { x: 0, y: 0 };
     this.pointer = null;

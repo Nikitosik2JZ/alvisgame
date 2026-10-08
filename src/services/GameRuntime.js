@@ -5,9 +5,11 @@ import { SaveManager } from './SaveManager.js';
 import { LeaderboardManager } from './LeaderboardManager.js';
 import { AdManager } from '../managers/PlatformOffersManager.js';
 import { gameState } from '../state/GameState.js';
+import { AudioManager } from './AudioManager.js';
 
 export const saves = new SaveManager(gameState, platform);
 export const ads = new AdManager(gameState, platform, lifecycle, saves);
+export let audio;
 lifecycle.platform = platform;
 platform.on('pause', () => { saves.interrupt(); lifecycle.set('PLATFORM', true); });
 platform.on('resume', () => lifecycle.set('PLATFORM', false));
@@ -19,6 +21,7 @@ export async function initializeRuntime() {
   await platform.initialize();
   if (!localization.initialized) throw new Error('Localization must initialize before game state');
   const result = await saves.initialize();
+  audio ??= new AudioManager(gameState, lifecycle);
   document.querySelector('.local-badge').textContent = localization.t(platform.isYandex() ? 'platform.yandex' : 'platform.local');
   document.querySelector('#loading').textContent = localization.t('loading');
   return result;
@@ -48,4 +51,4 @@ export function finishLoading(game) {
     leaderboard = new LeaderboardManager(gameState, platform, saves);
   });
 }
-export function destroyRuntime() { saves.destroy(); leaderboard?.destroy(); }
+export function destroyRuntime() { saves.destroy(); leaderboard?.destroy(); audio?.destroy(); }

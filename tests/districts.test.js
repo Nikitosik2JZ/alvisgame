@@ -37,13 +37,13 @@ test('all district purchases validate each requirement atomically and never char
     state.loadSaveData(valid); assert.equal(state.unlockDistrict(id), true); assert.equal(state.values.money, 0);
     const after = state.getSaveData(); assert.equal(state.unlockDistrict(id), false); assert.deepEqual(state.getSaveData(), after);
   }
-  const state = new GameState(); state.update({ xp: xpForLevel(4), money: 3000, reputation: -10 });
+  const state = new GameState(); state.update({ xp: xpForLevel(4), money: DISTRICTS.center.cost, reputation: -10 });
   assert.equal(state.unlockDistrict('center'), true, 'existing Center unlock still ignores reputation');
   assert.equal(state.unlockDistrict('__proto__'), false);
 });
 
 test('owned business transport allows access while walking; unowned equipped values cannot unlock it', () => {
-  const state = new GameState(); state.loadSaveData({ xp: xpForLevel(14), reputation: 70, money: 45000, ownedTransports: ['MOPED'], equippedTransport: 'WALKING' });
+  const state = new GameState(); state.loadSaveData({ xp: xpForLevel(14), reputation: 70, money: DISTRICTS.business.cost, ownedTransports: ['MOPED'], equippedTransport: 'WALKING' });
   assert.equal(state.unlockDistrict('business'), true); assert.equal(state.selectDistrict('business'), true);
   assert.equal(state.values.equippedTransport, 'WALKING');
 });

@@ -14,12 +14,12 @@ export class EventManager {
   constructor(state, orders, random = Math.random, now = () => performance.now()) {
     this.state = state; this.orders = orders; this.random = random;
     this.modifiers = new TemporaryModifiers(now); this.history = [];
-    this.negativeStreak = 0; this.serial = 0; this.lastRareNegative = -Infinity;
+    this.negativeStreak = Math.min(B.maxNegativeStreak, state.values.eventNegativeStreak || 0); this.serial = 0; this.lastRareNegative = -Infinity;
     this.lastId = null; this.active = null; this.pending = null;
     orders.events = this;
   }
   eligible(event, checkDeadline = true) {
-    const s = this.state.getSnapshot(), r = event.requirements || {};
+    const s = this.state.values, r = event.requirements || {};
     return (!r.bicycle || s.transport === 'BICYCLE') && (!r.reputation || s.reputation >= r.reputation)
       && (!r.districts || r.districts.includes(s.selectedDistrict))
       && (!r.transports || r.transports.includes(s.equippedTransport))
@@ -45,6 +45,7 @@ export class EventManager {
   }
   prepare() {
     this.pending = null; this.pendingOrder = null;
+    if (this.state.tutorialActive) return;
     if (!this.hasOrderContext()) return;
     this.pendingOrder = this.orders.order;
     const district = DISTRICTS[this.state.getSnapshot().selectedDistrict];

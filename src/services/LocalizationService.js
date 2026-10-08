@@ -43,8 +43,17 @@ export class LocalizationService {
   }
   currency(value) { return `${this.number(value)} ₽`; }
   plural(key, count, variables = {}) {
-    if (!this.pluralRules.has(this.language)) this.pluralRules.set(this.language, new Intl.PluralRules(this.language));
-    const form = this.pluralRules.get(this.language).select(count);
+    let form;
+    if (typeof Intl.PluralRules === 'function') {
+      if (!this.pluralRules.has(this.language)) this.pluralRules.set(this.language, new Intl.PluralRules(this.language));
+      form = this.pluralRules.get(this.language).select(count);
+    } else {
+      // Exact cardinal rules for the two shipped languages; no BigInt dependency.
+      const n = Math.abs(count), integer = Number.isInteger(n), last = n % 10, tens = n % 100;
+      form = this.language === 'en' ? n === 1 ? 'one' : 'other'
+        : !integer ? 'other' : last === 1 && tens !== 11 ? 'one'
+        : last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14) ? 'few' : 'many';
+    }
     return this.t(this.has(`${key}.${form}`) ? `${key}.${form}` : `${key}.other`, { ...variables, count });
   }
   t(key, variables = {}) {

@@ -15,6 +15,7 @@ import { TaskManager } from '../managers/TaskManager.js';
 const STAT_KEYS = ['completedOrders', 'failedOrders', 'totalMoneyEarned', 'totalTipsEarned', 'totalFinesPaid', 'totalDistanceDelivered'];
 
 const initialState = () => ({ money: 0, level: 1, xp: 0, reputation: 0, movementSpeed: BALANCE.walkingBaseSpeed,
+  tutorialVersionSeen: 0, masterVolume: .65, muted: false,
   unlockedDistricts: ['residential'], selectedDistrict: 'residential', demandBonusOrders: 0,
   districtIntroductionsSeen: ['residential'], districtStats: Object.fromEntries(Object.keys(DISTRICTS).map(id => [id, emptyDistrictStats()])),
   transport: TRANSPORT.WALKING, equippedTransport: TRANSPORT.WALKING, ownedTransports: [TRANSPORT.WALKING], transportMilestones: [],
@@ -199,7 +200,19 @@ export class GameState {
     snapshot.employees = structuredClone(this.values.employees);
     snapshot.companyCandidates = structuredClone(this.values.companyCandidates);
     if (Object.values(localization.catalogs).some(c => c['company-config.001'] === snapshot.companyName)) snapshot.companyName = null;
-    return { version: 11, ...snapshot };
+    return { version: 12, ...snapshot };
+  }
+
+  completeTutorial() {
+    if (this.values.tutorialVersionSeen >= 1) return;
+    this.values.tutorialVersionSeen = 1;
+    this.refresh(); // SaveManager writes the local backup synchronously.
+  }
+
+  setAudioPreferences(volume, muted) {
+    if (Number.isFinite(volume)) this.values.masterVolume = Math.max(0, Math.min(1, volume));
+    this.values.muted = Boolean(muted);
+    this.refresh();
   }
 
   loadSaveData(data) {
@@ -235,6 +248,13 @@ export class GameState {
     if (Array.isArray(data.transportMilestones)) this.values.transportMilestones = [...new Set(data.transportMilestones.filter(id => TRANSPORTS.some(t => t.id === id && t.milestoneTitle)))];
     if (Number.isFinite(data.largeOrderBoost)) this.values.largeOrderBoost = Math.max(0, Math.min(EVENT_BALANCE.largeOrderBoost, data.largeOrderBoost));
     for (const key of STAT_KEYS) if (Number.isFinite(data[key])) this.values[key] = Math.max(0, Math.floor(data[key]));
+    const veteran = this.values.completedOrders > 0 || data.level > 1 || data.xp >= 100
+      || this.values.ownedItems.length > 0 || this.values.ownedTransports.length > 1
+      || this.values.unlockedDistricts.length > 1 || this.values.companyUnlocked;
+    this.values.tutorialVersionSeen = Number.isSafeInteger(data.tutorialVersionSeen) && data.tutorialVersionSeen >= 1
+      ? data.tutorialVersionSeen : ((data.version ?? 1) < 12 && veteran) || data.tutorialCompleted === true ? 1 : 0;
+    if (Number.isFinite(data.masterVolume)) this.values.masterVolume = Math.max(0, Math.min(1, data.masterVolume));
+    this.values.muted = data.muted === true;
     this.update(data);
     this.loadingProgression = false;
     return true;

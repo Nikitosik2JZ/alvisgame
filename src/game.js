@@ -9,7 +9,8 @@ bindBrowserLifecycle();
 
 // Compact objectives follow the actual HUD height, including safe areas.
 const hud = document.querySelector('.hud');
-new ResizeObserver(() => document.documentElement.style.setProperty('--hud-bottom', `${hud.getBoundingClientRect().bottom + 12}px`)).observe(hud);
+const observer = new ResizeObserver(() => document.documentElement.style.setProperty('--hud-bottom', `${hud.getBoundingClientRect().bottom + 12}px`));
+observer.observe(hud);
 
 export const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -18,8 +19,8 @@ export const game = new Phaser.Game({
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: document.querySelector('#game').clientWidth,
+    height: document.querySelector('#game').clientHeight,
   },
   physics: {
     default: 'arcade',
@@ -28,3 +29,4 @@ export const game = new Phaser.Game({
   input: { activePointers: 3 },
   scene: [BootScene, GameScene],
 });
+game.events.once('destroy', () => observer.disconnect());

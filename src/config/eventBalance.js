@@ -1,5 +1,5 @@
 export const EVENT_BALANCE = {
-  rarity: { COMMON: .20, UNCOMMON: .05, RARE: .03, VERY_RARE: .02 },
+  rarity: { COMMON: .14, UNCOMMON: .035, RARE: .02, VERY_RARE: .01 },
   maxNegativeStreak: 2, rareNegativeCooldown: 5, positiveRecoveryWeight: .5, historyLimit: 5,
   bagRisk: .2, shoesRisk: .8, fragileDamageRisk: .08, nearDeadline: 10,
   colaFine: 250, colaReputation: -2, soupPayment: -.3, wrongEntranceTime: 15, barrierTime: 10,

@@ -13,7 +13,7 @@ import { restaurants, customers } from '../src/world/deliveryLocations.js';
 function setup(transport = 'WALKING') {
   let time = 0;
   const state = new GameState();
-  state.update({ xp: xpForLevel(10), money: 60000 });
+  state.update({ xp: xpForLevel(10), money: TRANSPORTS.reduce((n,t) => n + t.purchasePrice, 0) + 20000 });
   for (const t of TRANSPORTS.slice(1)) state.purchaseTransport(t.id);
   state.equipTransport(transport);
   const orders = new OrderManager({ state, restaurants, customers, now: () => time, random: () => 0 });
@@ -35,7 +35,7 @@ function forceOrder(orders, type, routeRoll = .5) {
 
 test('vehicle purchases reject level, money, duplicates and unknown IDs without mutation', () => {
   for (const t of TRANSPORTS.slice(1)) {
-    const state = new GameState(); state.update({ money: 60000 });
+    const state = new GameState(); state.update({ money: 50000000 });
     const before = state.getSaveData();
     assert.match(state.purchaseTransport(t.id).reason, /Требуется уровень/);
     assert.deepEqual(state.getSaveData(), before);
@@ -182,7 +182,7 @@ test('version 5 roundtrips all vehicles, equipment, milestones and safe legacy m
 });
 
 test('career follows permanent ownership and goals advance independently of equipped transport', () => {
-  const state = new GameState(); state.update({ money: 60000, xp: xpForLevel(10) });
+  const state = new GameState(); state.update({ money: 50000000, xp: xpForLevel(10) });
   state.values.completedOrders = 15; state.refresh();
   const expected = ['Пеший курьер', 'Велокурьер', 'Велокурьер', 'Автокурьер'];
   for (const t of TRANSPORTS) {

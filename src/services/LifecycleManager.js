@@ -18,6 +18,7 @@ export class LifecycleManager {
     this.refresh();
   }
   refresh() {
+    if (typeof document !== 'undefined') document.body?.classList.toggle('game-paused', this.paused);
     if (this.paused) this.platform?.gameplayStop(); else this.platform?.gameplayStart();
     for (const listener of this.listeners) listener(this.paused);
   }

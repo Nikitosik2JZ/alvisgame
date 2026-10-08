@@ -25,6 +25,9 @@ import { TasksUI } from '../ui/TasksUI.js';
 import { LeaderboardUI } from '../ui/LeaderboardUI.js';
 import { lifecycle } from '../services/LifecycleManager.js';
 import { ads, finishLoading } from '../services/GameRuntime.js';
+import { TutorialUI } from '../ui/TutorialUI.js';
+import { SettingsUI } from '../ui/SettingsUI.js';
+import { FeedbackUI } from '../ui/FeedbackUI.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -65,7 +68,10 @@ export class GameScene extends Phaser.Scene {
     this.leaderboardUI = new LeaderboardUI(this, gameState, this.player);
     if (import.meta.env.DEV) setupDevelopmentCheats(this, gameState);
     this.objectiveMarker = new ObjectiveMarker(this, this.orders);
-    this.orders.generate();
+    this.settingsUI = new SettingsUI(this, gameState, this.player);
+    this.feedbackUI = new FeedbackUI(this, gameState);
+    this.tutorialUI = new TutorialUI(this, gameState);
+    this.orders.generate(gameState.tutorialActive ? { forcedType: 'STANDARD', tutorialOrigin: this.player } : {});
     lifecycle.set('TRANSITION', false);
     this.cameras.main.fadeIn(DISTRICT_TRANSITION_MS);
     finishLoading(this.game);
@@ -87,8 +93,9 @@ export class GameScene extends Phaser.Scene {
 
   update(time) {
     if (this.districtTransition || lifecycle.paused) return;
-    this.player.speedMultiplier = this.deliveryEvents.modifiers.speed(gameState.getSnapshot().transport);
+    this.player.speedMultiplier = this.deliveryEvents.modifiers.speed(gameState.values.transport);
     this.player.update();
+    this.tutorialUI.update();
     this.orders.update();
     this.orderUI.update();
     this.objectiveMarker.update(time);
