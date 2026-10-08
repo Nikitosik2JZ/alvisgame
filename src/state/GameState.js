@@ -191,6 +191,7 @@ export class GameState {
 
   getSaveData() {
     const snapshot = this.getSnapshot();
+    delete snapshot.deliveryAdBonus;
     // Old task titles/descriptions are rebuilt from their existing IDs by loadTaskState.
     const canonicalTask = task => task ? Object.fromEntries(Object.entries(task).filter(([key]) => !['title', 'description'].includes(key))) : null;
     snapshot.dailyTasks = snapshot.dailyTasks.map(canonicalTask);
@@ -204,10 +205,6 @@ export class GameState {
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
     this.values = initialState();
-    const bonus = data.deliveryAdBonus;
-    if (bonus && typeof bonus.id === 'string' && bonus.id.length <= 100 && Number.isSafeInteger(bonus.amount) && bonus.amount > 0) {
-      this.values.deliveryAdBonus = { id: bonus.id, amount: bonus.amount, attempted: bonus.attempted === true, claimed: bonus.claimed === true };
-    }
     Object.assign(this.values, loadCompanyState(data));
     Object.assign(this.values, loadProgressionState(data));
     Object.assign(this.values, loadTaskState(data));

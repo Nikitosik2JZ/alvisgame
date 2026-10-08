@@ -63,9 +63,9 @@ const viewports=[{width:1280,height:800},{width:390,height:844},{width:430,heigh
    await page.click('#accept-order');await mixed(page,language,type+' active');
    for(let i=0;i<3;i++)await page.evaluate(()=>{if(['ACCEPTED','PICKED_UP'].includes(scene.orders.order.status)){scene.deliveryEvents.pending=null;const t=scene.orders.getTarget();scene.player.setPosition(t.x,t.y);scene.orders.interact(scene.player);}});
    assert.equal(await page.evaluate(()=>scene.orders.order.status),'DELIVERED');await mixed(page,language,type+' result');await layout(page,'#order-panel');
-   await page.click('#rewarded-delivery');await mixed(page,language,'ad unavailable');await page.click('#continue-delivery');
+   await page.click('#rewarded-delivery');await mixed(page,language,'ad unavailable');await page.waitForFunction(()=>scene.orders.order.status==='AVAILABLE');
   }
-  await page.evaluate(()=>{scene.orders.order=null;scene.orders.generate();scene.orders.accept();scene.orders.order.deadline=scene.orders.now()-1;scene.orders.update();});await mixed(page,language,'failure');await page.click('#continue-delivery');
+  await page.evaluate(()=>{scene.orders.order=null;scene.orders.generate();scene.orders.accept();scene.orders.order.deadline=scene.orders.now()-1;scene.orders.update();});await mixed(page,language,'failure');await page.waitForFunction(()=>scene.orders.order.status==='AVAILABLE');
   // Every personal event, both choices and deterministic low/high outcome rolls.
   if(viewport.width===1280){
    const events=await page.evaluate(async()=>{const {EVENTS}=await import('/src/data/events.js');return EVENTS.map(e=>({id:e.id,choices:e.choices?.length||1}));});

@@ -129,7 +129,7 @@ body:has(dialog[open]) .interact { display: none; }
 .compact .touch-controls { display: flex; }
 .compact .order-panel { top: var(--hud-bottom, 70px); left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); width: auto; max-width: 510px; padding: 8px 10px; font-size: 12px; line-height: 1.4; max-height: calc(100dvh - var(--hud-bottom, 70px) - 164px - env(safe-area-inset-bottom)); overflow-y: auto; }
 .compact .order-panel[data-mode="offer"] { top: auto; bottom: calc(152px + env(safe-area-inset-bottom)); max-height: calc(100dvh - var(--hud-bottom, 70px) - 166px - env(safe-area-inset-bottom)); }
-.compact .order-panel[data-mode="result"] { max-height: calc(100dvh - var(--hud-bottom, 70px) - 16px - env(safe-area-inset-bottom)); }
+.compact .order-panel[data-mode="result"] { max-height: calc(100dvh - var(--hud-bottom, 70px) - 164px - env(safe-area-inset-bottom)); }
 #result { max-height: min(22dvh, 150px); overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
 .compact #order-offer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; }
 .compact #offer-restaurant { font-weight: bold; margin: 4px 0; }
@@ -212,3 +212,7 @@ body:has(dialog[open]) .interact { display: none; }
 #magnate-celebration { border: 1px solid #f0b65c; border-radius: 12px; padding: 16px; margin-bottom: 16px; line-height: 1.6; background: #344539; }
 #magnate-celebration h3 { color: #ffe6a9; }
 @media (max-height: 450px) { #achievement-toast { bottom: 12px; max-width: 280px; } }
+
+.compact .order-panel[data-mode="result"] #result { max-height: 64px; overflow-y: auto; touch-action: pan-y; white-space: pre-line; }
+.compact #result-actions p { margin: 4px 0; }
+.compact #result-actions button { min-height: 40px; padding: 8px 12px; }

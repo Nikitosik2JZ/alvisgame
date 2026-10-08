@@ -88,7 +88,8 @@ async function openScreen(page, selector) {
     assert.match(await page.locator('#profile-details').textContent(), /Новичок|Надёжный|Любимчик|Легенда/);
     const before = await snapshot(); await page.keyboard.press('F4'); assert.deepEqual(await snapshot(), before);
     await page.click('#profile-dialog [data-close]');
-    for (const key of ['F4','F5','F6']) {
+    await page.evaluate(() => { testScene.orders.accept(); });
+    for (const key of ['F4','F11','F6']) {
       await page.keyboard.press(key); await page.waitForSelector('#event-dialog[open]');
       if (await page.locator('#event-buttons button').count() === 2) await page.locator('#event-buttons button').first().click();
       await page.getByRole('button',{name:'ПОНЯТНО',exact:true}).click();
@@ -111,14 +112,10 @@ async function openScreen(page, selector) {
     if (process.env.PRODUCTION_URL) {
       await page.goto(process.env.PRODUCTION_URL); await page.waitForSelector('#objective:not(:empty)');
       const before=await page.locator('.stats').textContent();
-      for(const key of ['F2','F3','F4','F5','F6','F7']) await page.keyboard.press(key);
+      for(const key of ['F2','F3','F4','F11','F6','F7']) await page.keyboard.press(key);
       await page.waitForTimeout(200); assert.equal(await page.locator('.stats').textContent(),before);
       assert.equal(await page.locator('#event-dialog[open]').count(),0); assert.deepEqual(errors,[]);
     }
     console.log('PASS: four deliveries, district purchase/switch/restart, all choice UIs, event results, modal/timer/input blocking, history, responsive touch controls, console, production cheats.');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
-
-
-
-

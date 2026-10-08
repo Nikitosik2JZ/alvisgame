@@ -4,7 +4,6 @@ import { ORDER_STATUS } from '../managers/OrderManager.js';
 import { ORDER_TYPES, DISTRICTS } from '../config/economyConfig.js';
 import { transportFor } from '../config/transportConfig.js';
 import { ads, saves } from '../services/GameRuntime.js';
-import { lifecycle } from '../services/LifecycleManager.js';
 import { localization as l } from '../services/LocalizationService.js';
 
 export class OrderUI {
@@ -20,25 +19,19 @@ export class OrderUI {
     this.resultActions = document.querySelector('#result-actions');
     this.bonusText = document.querySelector('#delivery-ad-bonus');
     this.rewardButton = document.querySelector('#rewarded-delivery');
-    this.continueButton = document.querySelector('#continue-delivery');
     this.feedback = document.querySelector('#ad-feedback');
     this.reward = async () => {
       if (ads.busy || this.rewardButton.disabled) return;
-      this.rewardButton.disabled = true; this.continueButton.disabled = true;
+      const bonus = manager.state.values.deliveryAdBonus;
+      this.rewardButton.disabled = true;
       const result = await ads.rewarded(manager);
-      this.feedback.textContent = result.rewarded ? tr('order-ui.001') : l.t('adUnavailable');
-      this.continueButton.disabled = false;
-    };
-    this.continue = async () => {
-      if (ads.busy || this.continueButton.disabled || document.querySelector('dialog[open]')) return;
-      this.continueButton.disabled = true;
-      await ads.interstitial(manager);
-      // A platform/auth/visibility blocker may still remain after the ad closes.
-      manager.generate(); lifecycle.set('RESULT', false);
-      this.continueButton.disabled = false;
+      if (result.rewarded) this.resultActions.hidden = true;
+      else if (bonus === manager.state.values.deliveryAdBonus) {
+        this.feedback.textContent = l.t('adUnavailable');
+        this.rewardButton.disabled = false;
+      }
     };
     this.rewardButton.addEventListener('click', this.reward);
-    this.continueButton.addEventListener('click', this.continue);
     this.interaction = document.querySelector('#interact');
     this.acceptButton = document.querySelector('#accept-order');
     this.toggle = document.querySelector('#toggle-order');
@@ -69,15 +62,19 @@ export class OrderUI {
 
   render(event, order, extra) {
     this.resultActions.hidden = !['completed', 'failed'].includes(event);
-    if (event === 'generated') lifecycle.set('RESULT', false);
+    if (['generated', 'accepted'].includes(event)) {
+      ads.expireDelivery();
+      if (event === 'generated') void ads.interstitial(this.manager);
+    }
     if (['completed', 'failed'].includes(event)) {
-      lifecycle.set('RESULT', true); saves.interrupt();
+      saves.interrupt();
       if (event === 'completed') ads.offerDelivery(order, extra.payout);
       const bonus = event === 'completed' ? this.manager.state.values.deliveryAdBonus : null;
       this.bonusText.hidden = !bonus; this.rewardButton.hidden = !bonus;
       this.bonusText.textContent = bonus ? tr('order-ui.004', { v0: bonus.amount, v1: Math.round(ads.config.rewardedMultiplier * 100) }) : '';
       this.rewardButton.disabled = !bonus || bonus.attempted || bonus.claimed;
-      this.feedback.textContent = ''; this.continueButton.disabled = false;
+      this.feedback.textContent = '';
+      this.resultActions.hidden = !bonus;
     }
     const available = order.status === ORDER_STATUS.AVAILABLE;
     const typeLabel = ORDER_TYPES[order.type]?.name || tr('economy-config.001');
@@ -132,8 +129,8 @@ export class OrderUI {
 
   destroy() {
     this.rewardButton.removeEventListener('click', this.reward);
-    this.continueButton.removeEventListener('click', this.continue);
-    lifecycle.set('RESULT', false);
+    ads.expireDelivery();
+    this.resultActions.hidden = true;
     this.unsubscribeOrder();
     this.unsubscribeState();
     this.acceptButton.removeEventListener('click', this.accept);

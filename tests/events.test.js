@@ -100,6 +100,7 @@ test('negative streak, cooldown, no-repeat, bicycle and equipment requirements',
   events.orders.order.status = 'DELIVERED'; // Vehicle changes now require finishing the active order.
   state.update({ money: 3500 }); state.purchaseTransport('BICYCLE');
   assert.equal(events.eligible(EVENTS.find(e => e.id === 'puncture')), true);
+  events.orders.generate(); events.orders.accept();
   events.lastId = 'green'; events.debug('POSITIVE'); assert.notEqual(events.active.event.id, 'green'); events.resolve(); events.finish();
   const food = EVENTS.find(e => e.id === 'soup'), green = EVENTS.find(e => e.id === 'green');
   events.random = () => .3; events.negativeStreak = 0;
@@ -178,5 +179,49 @@ test('configured probability buckets and fragile protection are deterministic', 
     if (bag) { state.update({ money:1200 }); state.purchaseItem('thermobag'); }
     events.random=()=>.04; events.trigger('customer');
     assert.equal(Boolean(events.active), !bag);
+  }
+});
+
+
+test('initialization, idle, unaccepted offers and terminal orders cannot roll or show personal events', () => {
+  const state = new GameState();
+  const orders = new OrderManager({ state, restaurants, customers });
+  let rolls = 0, shown = 0;
+  const events = new EventManager(state, orders, () => { rolls++; return 0; });
+  events.onShow = () => shown++;
+  for (const status of [null, 'AVAILABLE', 'DELIVERED', 'FAILED']) {
+    orders.order = status ? { status } : null;
+    events.prepare(); events.pending = EVENTS[0];
+    assert.equal(events.trigger('customer'), false);
+    assert.equal(events.debug('NEGATIVE'), false);
+    assert.equal(events.pending, null);
+  }
+  assert.equal(rolls, 0); assert.equal(shown, 0);
+});
+
+test('prepared events belong to their accepted order and only trigger after pickup', () => {
+  const { orders, events } = setup();
+  events.prepare(); events.pending = EVENTS.find(e => e.trigger === 'pickup');
+  orders.order = { ...orders.order, status: 'ACCEPTED' };
+  assert.equal(events.trigger('pickup'), false);
+  orders.order.status = 'PICKED_UP';
+  events.pending = EVENTS.find(e => e.trigger === 'pickup');
+  assert.equal(events.trigger('pickup'), false);
+});
+
+test('positive, negative, choice, transport and district events still trigger for the relevant delivery', () => {
+  for (const id of ['green', 'entrance', 'fries', 'moped-route', 'yard-dog']) {
+    const { state, orders, events } = setup();
+    if (id === 'moped-route') {
+      orders.order.status = 'DELIVERED';
+      state.update({ money: 10000, xp: xpForLevel(6) }); state.purchaseTransport('MOPED');
+      orders.generate(); orders.accept(); orders.interact(orders.getTarget());
+    }
+    const event = EVENTS.find(e => e.id === id);
+    events.pendingOrder = orders.order; events.pending = event;
+    assert.equal(events.trigger(event.trigger), true, id);
+    assert.equal(events.active.event.id, id);
+    events.resolve(0); events.finish();
+    assert.equal(events.active, null);
   }
 });

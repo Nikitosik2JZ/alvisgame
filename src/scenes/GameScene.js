@@ -24,7 +24,7 @@ import { ProgressUI } from '../ui/ProgressUI.js';
 import { TasksUI } from '../ui/TasksUI.js';
 import { LeaderboardUI } from '../ui/LeaderboardUI.js';
 import { lifecycle } from '../services/LifecycleManager.js';
-import { finishLoading } from '../services/GameRuntime.js';
+import { ads, finishLoading } from '../services/GameRuntime.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -47,7 +47,7 @@ export class GameScene extends Phaser.Scene {
     this.orders = new OrderManager({ restaurants, customers, state: gameState, now: lifecycle.now, debug: import.meta.env.DEV });
     this.events.once('shutdown', () => this.orders.destroy());
     if (this.deliveryEvents) {
-      this.deliveryEvents.orders = this.orders; this.orders.events = this.deliveryEvents; this.deliveryEvents.pending = null;
+      this.deliveryEvents.orders = this.orders; this.orders.events = this.deliveryEvents; this.deliveryEvents.pending = null; this.deliveryEvents.pendingOrder = null; this.deliveryEvents.active = null;
     } else this.deliveryEvents = new EventManager(gameState, this.orders, Math.random, lifecycle.now);
     this.eventUI = new EventUI(this, this.player, this.deliveryEvents);
     this.orderUI = new OrderUI(this, this.orders, gameState, this.player);
@@ -73,6 +73,7 @@ export class GameScene extends Phaser.Scene {
 
   transitionDistrict() {
     this.districtTransition = true;
+    ads.expireDelivery(); this.orderUI.resultActions.hidden = true;
     lifecycle.set('TRANSITION', true);
     this.deliveryEvents.modifiers.items.clear(); this.deliveryEvents.pending = null;
     gameState.nextCloseOrder = false;

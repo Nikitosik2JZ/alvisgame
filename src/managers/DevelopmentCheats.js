@@ -131,8 +131,8 @@ export function setupDevelopmentCheats(scene, state) {
       }
       console.debug(`[Development] ${event.code}: company command`); return;
     }
-    if (['F4', 'F5', 'F6'].includes(event.code)) {
-      event.preventDefault(); scene.deliveryEvents.debug({ F4: 'POSITIVE', F5: 'NEGATIVE', F6: 'CHOICE' }[event.code]); return;
+    if (['F4', 'F6', 'F11'].includes(event.code)) {
+      event.preventDefault(); scene.deliveryEvents.debug({ F4: 'POSITIVE', F11: 'NEGATIVE', F6: 'CHOICE' }[event.code]); return;
     }
     if (event.code === 'F7') { event.preventDefault(); state.update({ xp: Math.max(450, state.getSnapshot().xp), money: Math.max(3000, state.getSnapshot().money) }); return; }
     const player = state.getSnapshot();

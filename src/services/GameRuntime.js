@@ -3,7 +3,7 @@ import { lifecycle } from './LifecycleManager.js';
 import { localization } from './LocalizationService.js';
 import { SaveManager } from './SaveManager.js';
 import { LeaderboardManager } from './LeaderboardManager.js';
-import { AdManager } from '../managers/AdManager.js';
+import { AdManager } from '../managers/PlatformOffersManager.js';
 import { gameState } from '../state/GameState.js';
 
 export const saves = new SaveManager(gameState, platform);

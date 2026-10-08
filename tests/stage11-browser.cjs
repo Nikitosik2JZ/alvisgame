@@ -66,15 +66,15 @@ const seed = { version: 10, money: 200000, xp: 10000, reputation: 150, completed
       await page.evaluate(() => { const t = scene.orders.getTarget(); scene.player.setPosition(t.x, t.y); scene.orders.interact(scene.player); });
       await page.waitForSelector('#result-actions:not([hidden])'); const delivered = await snapshot();
       assert.equal(await page.evaluate(() => {
-        const button = document.querySelector('#continue-delivery').getBoundingClientRect();
+        const button = document.querySelector('#rewarded-delivery').getBoundingClientRect();
         const panel = document.querySelector('#order-panel').getBoundingClientRect();
         return button.top >= panel.top && button.bottom <= panel.bottom && button.bottom <= innerHeight;
-      }), true, 'Continue without advertising must be visible on the result');
+      }), true, 'Optional rewarded action must fit the result panel');
       await page.screenshot({ path: path.join(artifacts, `${viewport.width}x${viewport.height}-result.png`) });
       assert.equal(delivered.completedOrders, beforeDelivery.completedOrders + 1); assert.ok(delivered.money > beforeDelivery.money);
       const payout = delivered.money - beforeDelivery.money; assert.match(await page.locator('#delivery-ad-bonus').innerText(), new RegExp(`\\+${Math.floor(payout / 2)} ₽`));
       await page.click('#rewarded-delivery'); assert.match(await page.locator('#ad-feedback').innerText(), /РЕКЛАМА СЕЙЧАС НЕДОСТУПНА/); assert.equal((await snapshot()).money, delivered.money);
-      await page.click('#continue-delivery'); assert.equal(await page.evaluate(() => life.paused), false); assert.equal(await page.evaluate(() => scene.orders.order.status), 'AVAILABLE');
+      await page.waitForFunction(() => scene.orders.order.status === 'AVAILABLE'); assert.equal(await page.evaluate(() => life.paused), false); assert.equal(await page.evaluate(() => scene.orders.order.status), 'AVAILABLE');
       await open('shop'); const purchase = await page.evaluate(() => scene.orders.state.purchaseItem('old-shoes')); assert.equal(purchase.ok, true); await close('shop');
       const district = await page.evaluate(() => scene.orders.state.unlockDistrict('center')); assert.equal(district, true);
       const company = await page.evaluate(() => scene.company.upgrade()); assert.equal(company.ok, true);

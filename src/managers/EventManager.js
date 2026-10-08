@@ -1,4 +1,5 @@
 import { t as tr } from '../services/LocalizationService.js';
+import { ORDER_STATUS } from './OrderManager.js';
 import { EVENTS } from '../data/events.js';
 import { EVENT_BALANCE as B } from '../config/eventBalance.js';
 import { DISTRICTS, reputationTier } from '../config/economyConfig.js';
@@ -39,8 +40,13 @@ export class EventManager {
     let roll = this.random() * weights.reduce((a, b) => a + b, 0);
     return pool.find((e, i) => (roll -= weights[i]) < 0) || pool.at(-1);
   }
+  hasOrderContext() {
+    return [ORDER_STATUS.ACCEPTED, ORDER_STATUS.PICKED_UP].includes(this.orders.order?.status);
+  }
   prepare() {
-    this.pending = null;
+    this.pending = null; this.pendingOrder = null;
+    if (!this.hasOrderContext()) return;
+    this.pendingOrder = this.orders.order;
     const district = DISTRICTS[this.state.getSnapshot().selectedDistrict];
     let roll = this.random(), rarity;
     for (const [key, chance] of Object.entries(B.rarity)) {
@@ -52,6 +58,9 @@ export class EventManager {
     this.pending = this.weighted(EVENTS.filter(e => e.rarity === rarity && e.id !== this.lastId && this.eligible(e, false)));
   }
   trigger(moment, resume = () => {}) {
+    if (!this.hasOrderContext() || this.orders.order.status !== ORDER_STATUS.PICKED_UP
+      || !['pickup', 'customer'].includes(moment)) { this.pending = null; resume(); return false; }
+    if (this.pendingOrder && this.pendingOrder !== this.orders.order) this.pending = null;
     let event = this.pending?.trigger === moment ? this.pending : null;
     if (event) this.pending = null;
     if (!event && moment === 'customer' && this.orders.order.type === 'FRAGILE' && !this.orders.order.damageChecked) {
@@ -63,7 +72,7 @@ export class EventManager {
     this.active = { event, resume, pausedAt: this.orders.now() }; this.onShow?.(event); return true;
   }
   debug(category) {
-    if (this.active || this.isBlocked?.()) return false;
+    if (!this.hasOrderContext() || this.active || this.isBlocked?.()) return false;
     const event = this.weighted(EVENTS.filter(e => e.category === category && e.id !== this.lastId && this.eligible(e)));
     if (!event) return false;
     this.active = { event, resume: () => {}, pausedAt: this.orders.now() }; this.onShow?.(event); return true;

@@ -6,7 +6,7 @@ import { LifecycleManager } from '../src/services/LifecycleManager.js';
 import { LocalizationService } from '../src/services/LocalizationService.js';
 import { SaveManager, decodeSave } from '../src/services/SaveManager.js';
 import { courierScore } from '../src/services/LeaderboardManager.js';
-import { AdManager } from '../src/managers/AdManager.js';
+import { AdManager } from '../src/managers/PlatformOffersManager.js';
 import { GameState } from '../src/state/GameState.js';
 import { OrderManager } from '../src/managers/OrderManager.js';
 import { CompanyManager } from '../src/managers/CompanyManager.js';
@@ -130,7 +130,7 @@ test('SDK wrappers grant only onRewarded, once; refusal, early close, errors and
 test('rewarded result credits exactly half payout once, no XP/reputation; reload cannot claim old result', async () => {
   const originalDocument = globalThis.document; globalThis.document = { querySelector: () => null };
   try {
-    const f = fixture(); await f.platform.initialize(); const life = new LifecycleManager({ now: f.clock }); life.set('BOOT', false); life.set('RESULT', true);
+    const f = fixture(); await f.platform.initialize(); const life = new LifecycleManager({ now: f.clock }); life.set('BOOT', false);
     const state = new GameState(), saves = new SaveManager(state, f.platform, { clock: f.clock }); await saves.initialize();
     const ads = new AdManager(state, f.platform, life, saves); const order = { status: 'DELIVERED' }, orders = { order, getTarget: () => null };
     ads.offerDelivery(order, { total: 641 }); const before = state.getSnapshot();
@@ -190,4 +190,28 @@ test('leaderboard reads batch rapid UI reopen requests, including 404, and pendi
   let available; f.sdk.isAvailableMethod = () => new Promise(resolve => { available = resolve; });
   const request = f.platform.setLeaderboardScore(999); f.handlers.ACCOUNT_SELECTION_DIALOG_OPENED(); available(true);
   assert.equal(await request, false); assert.ok(!f.calls.some(c => c[0] === 'score'));
+});
+
+
+test('delivery offers are temporary, expire and allow retry after unavailable video without pausing menus', async () => {
+  const previous = globalThis.document; globalThis.document = { querySelector: () => null };
+  try {
+    const state = new GameState(), life = new LifecycleManager(); life.set('BOOT', false);
+    const saves = { interrupt() {}, blockers: new Set() };
+    const platform = { accountEpoch: 0, showRewarded: async () => ({ rewarded: false }) };
+    const ads = new AdManager(state, platform, life, saves);
+    const order = { id: 'order-1', status: 'DELIVERED' }, orders = { order, getTarget: () => null };
+    ads.offerDelivery(order, { total: 321 });
+    assert.equal(life.paused, false);
+    assert.equal('deliveryAdBonus' in state.getSaveData(), false);
+    const restored = new GameState(); restored.loadSaveData({ ...state.getSaveData(), deliveryAdBonus: state.values.deliveryAdBonus });
+    assert.equal(restored.values.deliveryAdBonus, null);
+    await ads.rewarded(orders);
+    assert.equal(life.paused, false); assert.equal(state.values.deliveryAdBonus.attempted, false);
+    life.set('MENU:garage', true); await ads.rewarded(orders); assert.equal(life.paused, true);
+    life.set('MENU:garage', false); ads.expireDelivery();
+    assert.equal((await ads.rewarded(orders)).rewarded, false);
+    ads.offerDelivery({ id: 'order-2', status: 'DELIVERED' }, { total: 500 });
+    assert.equal(state.values.deliveryAdBonus.orderId, 'order-2');
+  } finally { globalThis.document = previous; }
 });
