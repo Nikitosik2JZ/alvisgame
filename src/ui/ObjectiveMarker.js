@@ -1,4 +1,5 @@
 import { BALANCE } from '../config/gameBalance.js';
+import { navigationGeometry } from './navigationVisibility.js';
 
 export class ObjectiveMarker {
   constructor(scene, manager) {
@@ -17,19 +18,15 @@ export class ObjectiveMarker {
     this.ring.lineStyle(4, color, 0.65 + Math.sin(time / 240) * 0.25);
     this.ring.strokeCircle(target.x, target.y, BALANCE.interactionRadius + Math.sin(time / 240) * 5);
     const camera = this.scene.cameras.main;
-    const x = target.x - camera.scrollX;
-    const y = target.y - camera.scrollY;
-    const margin = 30;
-    if (x > margin && x < camera.width - margin && y > margin && y < camera.height - margin) return;
-    const dx = x - camera.width / 2;
-    const dy = y - camera.height / 2;
-    const scale = Math.min((camera.width / 2 - margin) / Math.max(1, Math.abs(dx)), (camera.height / 2 - margin) / Math.max(1, Math.abs(dy)));
-    const ax = camera.width / 2 + dx * scale;
-    const ay = camera.height / 2 + dy * scale;
-    const angle = Math.atan2(dy, dx);
-    const point = (offset, length) => ({ x: ax + Math.cos(angle + offset) * length, y: ay + Math.sin(angle + offset) * length });
+    const { arrow } = navigationGeometry(camera, target, BALANCE.interactionRadius + 7);
+    if (!arrow) return;
+    const { x: ax, y: ay, angle } = arrow;
+    // Keep the edge indicator in screen pixels even when the camera is zoomed.
+    const local = camera.matrix.applyInverse(ax, ay);
+    this.arrow.setPosition(local.x, local.y).setScale(1 / camera.zoom).setRotation(-camera.rotation);
+    const point = (offset, length) => ({ x: Math.cos(angle + offset) * length, y: Math.sin(angle + offset) * length });
     const tip = point(0, 14), left = point(2.5, 14), right = point(-2.5, 14);
-    this.arrow.fillStyle(0x182b29, 0.9).fillCircle(ax, ay, 23);
+    this.arrow.fillStyle(0x182b29, 0.9).fillCircle(0, 0, 23);
     this.arrow.fillStyle(color).fillTriangle(tip.x, tip.y, left.x, left.y, right.x, right.y);
   }
 }
