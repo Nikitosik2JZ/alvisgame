@@ -1,3 +1,4 @@
+import { t as tr, localization } from '../services/LocalizationService.js';
 import { BALANCE, levelForXP } from '../config/gameBalance.js';
 import { CATEGORIES, itemById } from '../data/shopItems.js';
 import { DISTRICTS } from '../config/economyConfig.js';
@@ -30,9 +31,9 @@ export class GameState {
       unlockedDistricts: [...this.values.unlockedDistricts], ownedTransports: [...this.values.ownedTransports],
       districtIntroductionsSeen: [...this.values.districtIntroductionsSeen], districtStats: Object.fromEntries(Object.entries(this.values.districtStats).map(([id, stats]) => [id, { ...stats }])),
       transportMilestones: [...this.values.transportMilestones], ownedItems: [...this.values.ownedItems], equippedItems: { ...this.values.equippedItems },
-      employees: this.values.employees.map(e => ({ ...e })), companyVehicles: this.values.companyVehicles.map(v => ({ ...v })),
-      companyStats: { ...this.values.companyStats }, companyLog: [...this.values.companyLog],
-      companyCandidates: this.values.companyCandidates.map(c => ({ ...c })), companyUpgrades: { ...this.values.companyUpgrades },
+      employees: this.values.employees.map(e => ({ ...structuredClone(e), name: localization.displayName(e.name) })), companyVehicles: this.values.companyVehicles.map(v => ({ ...v })),
+      companyStats: { ...this.values.companyStats }, companyLog: structuredClone(this.values.companyLog),
+      companyCandidates: this.values.companyCandidates.map(c => ({ ...c, name: localization.displayName(c.name) })), companyUpgrades: { ...this.values.companyUpgrades },
       companyEffects: this.values.companyEffects.map(e => ({ ...e })), companyEventState: { ...this.values.companyEventState },
       achievements: [...this.values.achievements], claimedAchievementRewards: [...this.values.claimedAchievementRewards],
       careerMilestones: [...this.values.careerMilestones], claimedCareerRewards: [...this.values.claimedCareerRewards],
@@ -92,11 +93,11 @@ export class GameState {
 
   purchaseItem(id) {
     const item = itemById(id);
-    if (!item) return { ok: false, reason: 'Предмет не найден' };
-    if (this.values.ownedItems.includes(id)) return { ok: false, reason: 'Уже куплено' };
-    if (this.values.level < (item.requiredLevel || 1)) return { ok: false, reason: 'Требуется уровень ' + item.requiredLevel };
-    if (item.requiresItem && !this.values.ownedItems.includes(item.requiresItem)) return { ok: false, reason: 'Сначала купите: ' + itemById(item.requiresItem).name };
-    if (this.values.money < item.price) return { ok: false, reason: 'Не хватает денег · ещё ' + (item.price - this.values.money) + ' ₽' };
+    if (!item) return { ok: false, reason: tr('shop-manager.001') };
+    if (this.values.ownedItems.includes(id)) return { ok: false, reason: tr('game-state.001') };
+    if (this.values.level < (item.requiredLevel || 1)) return { ok: false, reason: tr('company-manager.007', { v0: item.requiredLevel }) };
+    if (item.requiresItem && !this.values.ownedItems.includes(item.requiresItem)) return { ok: false, reason: tr('shop-manager.005', { v0: itemById(item.requiresItem).name }) };
+    if (this.values.money < item.price) return { ok: false, reason: tr('game-state.002', { v0: item.price - this.values.money }) };
     this.values.money -= item.price;
     this.values.ownedItems.push(id);
     this.values.equippedItems[item.category] = id;
@@ -106,7 +107,7 @@ export class GameState {
 
   equipItem(id) {
     const item = itemById(id);
-    if (!item || !this.values.ownedItems.includes(id)) return { ok: false, reason: 'Предмет не куплен' };
+    if (!item || !this.values.ownedItems.includes(id)) return { ok: false, reason: tr('game-state.003') };
     this.values.equippedItems[item.category] = id;
     this.refresh();
     return { ok: true, item };
@@ -122,16 +123,16 @@ export class GameState {
   setDemand(count) { this.values.demandBonusOrders = Math.max(0, Math.floor(count)); this.refresh(); }
 
   transportChangeError() {
-    return this.isTransportLocked?.() ? 'СНАЧАЛА ЗАВЕРШИТЕ ТЕКУЩИЙ ЗАКАЗ' : null;
+    return this.isTransportLocked?.() ? tr('game-state.004') : null;
   }
 
   purchaseTransport(id) {
     const transport = transportById(id), blocked = this.transportChangeError();
-    if (!transport) return { ok: false, reason: 'Транспорт не найден' };
-    if (this.values.ownedTransports.includes(id)) return { ok: false, reason: 'Уже куплено' };
+    if (!transport) return { ok: false, reason: tr('game-state.005') };
+    if (this.values.ownedTransports.includes(id)) return { ok: false, reason: tr('game-state.001') };
     if (blocked) return { ok: false, reason: blocked };
-    if (this.values.level < transport.requiredLevel) return { ok: false, reason: 'Требуется уровень ' + transport.requiredLevel };
-    if (this.values.money < transport.purchasePrice) return { ok: false, reason: 'Не хватает денег · ещё ' + (transport.purchasePrice - this.values.money) + ' ₽' };
+    if (this.values.level < transport.requiredLevel) return { ok: false, reason: tr('company-manager.007', { v0: transport.requiredLevel }) };
+    if (this.values.money < transport.purchasePrice) return { ok: false, reason: tr('game-state.002', { v0: transport.purchasePrice - this.values.money }) };
     this.values.money -= transport.purchasePrice;
     this.values.ownedTransports.push(id);
     this.values.equippedTransport = id;
@@ -140,7 +141,7 @@ export class GameState {
   }
 
   equipTransport(id) {
-    if (!transportById(id) || !this.values.ownedTransports.includes(id)) return { ok: false, reason: 'Транспорт не куплен' };
+    if (!transportById(id) || !this.values.ownedTransports.includes(id)) return { ok: false, reason: tr('game-state.006') };
     const blocked = this.transportChangeError();
     if (blocked) return { ok: false, reason: blocked };
     this.values.equippedTransport = id;
@@ -156,12 +157,12 @@ export class GameState {
 
   districtUnlockError(id) {
     const district = Object.hasOwn(DISTRICTS, id) ? DISTRICTS[id] : null;
-    if (!district) return 'Район не найден';
-    if (this.values.unlockedDistricts.includes(id)) return 'Район уже открыт';
-    if (this.values.level < district.level) return `Требуется уровень ${district.level}`;
-    if (district.reputation && this.values.reputation < district.reputation) return `Требуется репутация ${district.reputation}`;
-    if (district.requiredOwnedTransports && !district.requiredOwnedTransports.some(t => this.values.ownedTransports.includes(t))) return 'Купите мопед или автомобиль';
-    if (this.values.money < district.cost) return `Не хватает денег · ещё ${district.cost - this.values.money} ₽`;
+    if (!district) return tr('game-state.007');
+    if (this.values.unlockedDistricts.includes(id)) return tr('game-state.008');
+    if (this.values.level < district.level) return tr('company-manager.007', { v0: district.level });
+    if (district.reputation && this.values.reputation < district.reputation) return tr('game-state.009', { v0: district.reputation });
+    if (district.requiredOwnedTransports && !district.requiredOwnedTransports.some(t => this.values.ownedTransports.includes(t))) return tr('game-state.010');
+    if (this.values.money < district.cost) return tr('game-state.002', { v0: district.cost - this.values.money });
     return null;
   }
 
@@ -173,8 +174,8 @@ export class GameState {
   }
 
   districtSwitchError(id) {
-    if (!Object.hasOwn(DISTRICTS, id) || !this.values.unlockedDistricts.includes(id)) return 'Сначала откройте район';
-    if (this.isTransportLocked?.() || this.isDistrictLocked?.() || this.isDistrictBlocked?.()) return 'СНАЧАЛА ЗАВЕРШИТЕ ТЕКУЩИЙ ЗАКАЗ';
+    if (!Object.hasOwn(DISTRICTS, id) || !this.values.unlockedDistricts.includes(id)) return tr('game-state.011');
+    if (this.isTransportLocked?.() || this.isDistrictLocked?.() || this.isDistrictBlocked?.()) return tr('game-state.004');
     return null;
   }
 
@@ -188,7 +189,17 @@ export class GameState {
     this.values.districtIntroductionsSeen.push(id); this.refresh(); return true;
   }
 
-  getSaveData() { return { version: 11, ...this.getSnapshot(), deliveryAdBonus: this.values.deliveryAdBonus ? { ...this.values.deliveryAdBonus } : null }; }
+  getSaveData() {
+    const snapshot = this.getSnapshot();
+    // Old task titles/descriptions are rebuilt from their existing IDs by loadTaskState.
+    const canonicalTask = task => task ? Object.fromEntries(Object.entries(task).filter(([key]) => !['title', 'description'].includes(key))) : null;
+    snapshot.dailyTasks = snapshot.dailyTasks.map(canonicalTask);
+    snapshot.rotatingChallenge = canonicalTask(snapshot.rotatingChallenge);
+    snapshot.employees = structuredClone(this.values.employees);
+    snapshot.companyCandidates = structuredClone(this.values.companyCandidates);
+    if (Object.values(localization.catalogs).some(c => c['company-config.001'] === snapshot.companyName)) snapshot.companyName = null;
+    return { version: 11, ...snapshot };
+  }
 
   loadSaveData(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;

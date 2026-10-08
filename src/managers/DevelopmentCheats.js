@@ -1,3 +1,4 @@
+import { t as tr } from '../services/LocalizationService.js';
 import { xpForLevel } from '../config/gameBalance.js';
 import { transportFor, TRANSPORTS } from '../config/transportConfig.js';
 import { COMPANY, employeeXpRequired } from '../config/companyConfig.js';
@@ -76,7 +77,7 @@ export function setupDevelopmentCheats(scene, state) {
     if (kind === 'companyLevel') s.officeLevel = s.companyLevel = Math.max(s.companyLevel, target);
     if (kind === 'employees') {
       s.officeLevel = s.companyLevel = Math.max(s.companyLevel, COMPANY.levels.find(l => l.slots >= target).level);
-      while (s.employees.length < target) s.employees.push(normalizeEmployee({ id: scene.company.nextId('courier', s.employees), name: 'Тестовый курьер' }));
+      while (s.employees.length < target) s.employees.push(normalizeEmployee({ id: scene.company.nextId('courier', s.employees), name: tr('development-cheats.001') }));
     }
     if (kind === 'publicAchievements') for (const a of ACHIEVEMENTS.filter(a => !a.hidden)) {
       if (s.achievements.filter(id => ACHIEVEMENTS.find(a => a.id === id && !a.hidden)).length >= target) break;

@@ -1,5 +1,6 @@
 import { COMPANY, companyLevel, companyName, companyVehicle, archetypeFor, clampStat, employeeXpRequired } from '../config/companyConfig.js';
 import { COMPANY_EVENT_BALANCE as B } from '../data/companyEvents.js';
+import { migrateSavedMessage, validMessage } from '../services/LocalizedMessages.js';
 
 const amount = (value, fallback = 0) => Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER ? value : fallback;
 const identifier = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(value) && !['__proto__', 'constructor', 'prototype'].includes(value);
@@ -28,7 +29,7 @@ export function normalizeEmployee(employee) {
     currentXp: level === COMPANY.employeeMaxLevel ? 0 : bounded(employee.currentXp, employeeXpRequired(level) - .000001),
     workRemainder: bounded(employee.workRemainder, 100), failureRemainder: bounded(employee.failureRemainder, .999999999),
     permanentEfficiencyBonus: bounded(employee.permanentEfficiencyBonus, COMPANY.permanentBonusCap),
-    unavailableUntil: amount(employee.unavailableUntil), recoveryMessage: typeof employee.recoveryMessage === 'string' ? employee.recoveryMessage.slice(0, 160) : '',
+    unavailableUntil: amount(employee.unavailableUntil), recoveryMessage: validMessage(employee.recoveryMessage) ? migrateSavedMessage(employee.recoveryMessage) : '',
   };
 }
 
@@ -84,6 +85,6 @@ export function loadCompanyState(data) {
   result.companyEventState = { remainingMs: Number.isFinite(data.companyEventState?.remainingMs) ? bounded(data.companyEventState.remainingMs, B.intervalMs[1]) : null,
     lastId: typeof data.companyEventState?.lastId === 'string' ? data.companyEventState.lastId.slice(0, 80) : null,
     negativeStreak: Math.floor(bounded(data.companyEventState?.negativeStreak, B.maxNegativeStreak)) };
-  if (Array.isArray(data.companyLog)) result.companyLog = data.companyLog.filter(message => typeof message === 'string').slice(0, COMPANY.logLimit).map(message => message.slice(0, 160));
+  if (Array.isArray(data.companyLog)) result.companyLog = data.companyLog.filter(value => validMessage(value)).slice(0, COMPANY.logLimit).map(value => migrateSavedMessage(value));
   return result;
 }

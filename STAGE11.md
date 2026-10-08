@@ -1,5 +1,7 @@
 # Stage 11 — Yandex technical integration
 
+**Localization pass, 2026-10-08:** complete bundled RU/EN catalogs, SDK language before gameplay modules, centralized fallbacks, development URL overrides, localized static/dynamic UI, number/plural helpers, language-neutral saved task/log migration and automated audits are now part of Stage 11. See [LOCALIZATION_AUDIT.md](LOCALIZATION_AUDIT.md) and [LOCALIZATION_GLOSSARY.md](LOCALIZATION_GLOSSARY.md). The original integration audit below is retained with startup/localization notes updated. Stage 12 has not begun.
+
 ## Baseline audit
 
 The repository was clean on `main`, baseline `d162021` (Stage 10). Architecture: Phaser/Vite, BootScene → GameScene, singleton GameState with version-10 migrations, LOCAL PlatformService using `courier-empire-save-v1`, mathematical CompanyManager with two-hour offline cap, TaskManager/daily bonuses/rotating challenges, native dialog ModalUI plus separate personal/company EventUI, responsive viewport HUD/analog MovementInput. No actual audio package or leaderboard existed. Orders used raw `performance.now()` and continued during hidden tabs/menus; company used a document timer and `Date.now()` timestamps. Progress subscribes to GameState, not individual screens.
@@ -8,7 +10,7 @@ Before integration, `npm install` and `npm run build` passed and Stage 10 ran in
 
 ## Startup and SDK boundary
 
-Boot initializes PlatformService, loads `/sdk.js` in an appropriate production host, awaits `YaGames.init()`, registers SDK lifecycle/account events, gets server time and Player, initializes Russian localization, then selects/migrates progress before automatic writes. It creates the existing company and courier textures, then GameScene builds world/physics/UI/orders. The first `postrender` removes the blocking loading overlay, calls idempotent `LoadingAPI.ready()` once, removes BOOT and starts GameplayAPI if no blocker remains. District restarts do not repeat Ready.
+The main entry initializes PlatformService, loads `/sdk.js` in an appropriate production host and awaits `YaGames.init()`. PlatformService immediately reads `environment.i18n.lang`, registers lifecycle/account events and gets server time/Player. The entry resolves ru/en, initializes LocalizationService and translates HTML, then dynamically imports the existing Phaser game/data modules. Boot selects/migrates progress before automatic writes, creates the existing company and courier textures, then GameScene builds world/physics/UI/orders. The first `postrender` removes the blocking loading overlay, calls idempotent `LoadingAPI.ready()` once, removes BOOT and starts GameplayAPI if no blocker remains. District restarts do not repeat Ready.
 
 Only PlatformService knows `sdk`: device/language/time, Player/auth/data, advertising and modern `leaderboards`. `player.isAuthorized()` is used; no deprecated getMode/getLeaderboards, downloaded SDK, fake app ID, startup fullscreen request, third-party login/ads, IAP or sticky banners. LOCAL works without SDK, defaults to Russian and local device detection/Date.now, logs its mode once and grants no mock advertising reward. Player failure preserves Yandex lifecycle but blocks cloud writes until a successful next startup.
 
@@ -32,7 +34,7 @@ Important actions synchronously update local backup and request batched cloud sy
 
 TaskManager's date adapter is set before loading progress to UTC `YYYY-MM-DD` from `getServerTime()`. Existing saved day/claim high-water guards remain; old same-day task progress is retained. All daily bonus, task set and rotating challenge boundaries use this adapter. The runtime singleton defers daily initialization until platform time is selected. LOCAL uses Date.now but still stable UTC dates. On Yandex, temporary time failure extrapolates the last trusted anchor with a monotonic clock; without any anchor, fresh daily rollover/offline grants are deferred instead of trusting editable device time. Offline company timestamps use the same server source and keep the existing two-hour cap/duplicate protections.
 
-SDK `environment.i18n.lang` initializes LocalizationService at startup, even for unsupported languages. `src/locales/ru.json` supplies initial platform strings. Supported language and fallback: **ru**. Existing gameplay text remains Russian; full multilingual conversion is outside Stage 11. `deviceInfo.type` complements local detection; actual viewport/media queries still own responsive layout.
+SDK `environment.i18n.lang` initializes LocalizationService at startup, before gameplay/data module evaluation and save selection. `src/locales/ru.json` and `en.json` ship all current gameplay text. Exactly **ru/en** are supported; **ru/be/kk/uk/uz → ru**, **all other SDK codes → en**. LOCAL defaults to ru; Vite development alone accepts `?lang=ru/en`. There is no manual selector. Existing saved IDs remain stable; task strings are reconstructed from IDs and company logs/recovery strings migrate to message descriptors. `deviceInfo.type` complements local detection; actual viewport/media queries still own responsive layout.
 
 ## Advertising
 

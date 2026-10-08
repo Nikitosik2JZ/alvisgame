@@ -44,9 +44,9 @@ test('SDK ready/start/stop are idempotent; player error preserves playable Yande
   f.platform.gameReady(); f.platform.gameReady(); f.platform.gameplayStart(); f.platform.gameplayStart(); f.platform.gameplayStop(); f.platform.gameplayStop();
   assert.deepEqual(f.calls.map(c => c[0]), ['ready', 'start', 'stop']);
 });
-test('startup language initializes Russian fallback and platform device complements viewport detection', async () => {
+test('startup language initializes English and platform device complements viewport detection', async () => {
   const f = fixture(); await f.platform.initialize(); const l = new LocalizationService();
-  assert.equal(f.platform.getLanguage(), 'en'); assert.equal(l.initialize(f.platform.getLanguage()), 'ru'); assert.ok(l.t('login').includes('ЯНДЕКС'));
+  assert.equal(f.platform.getLanguage(), 'en'); assert.equal(l.initialize(f.platform.getLanguage()), 'en'); assert.ok(l.t('login').includes('YANDEX'));
   assert.equal(f.platform.getDeviceType(), 'mobile');
 });
 test('nested pause reasons freeze order, temporary and company clocks until all blockers close', async () => {

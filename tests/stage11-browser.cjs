@@ -19,11 +19,12 @@ const seed = { version: 10, money: 200000, xp: 10000, reputation: 150, completed
       const modes = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); if (m.text().includes('[Platform] LOCAL mode')) modes.push(m.text()); });
       await page.addInitScript(({ seed, key }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(seed)); }, { seed, key });
       const ready = async () => {
-        await page.waitForFunction(async () => {
+        await page.waitForSelector('#objective:not(:empty)');
+        await page.evaluate(async () => {
           const { game, lifecycle, platformService } = await import(document.querySelector('script[src*="/src/main.js"]').src);
           window.scene = game.scene.getScene('GameScene'); window.life = lifecycle; window.platform = platformService;
-          return !!scene?.orders?.order && platform.ready && !document.querySelector('#loading');
         });
+        await page.waitForFunction(() => !!scene?.orders?.order && platform.ready && !document.querySelector('#loading'));
         await page.evaluate(() => { scene.deliveryEvents.random = () => .99; scene.company.events.nextAt = Infinity; });
         if (await page.locator('#company-dialog[open]').count()) await page.click('#company-dialog [data-close]');
       };

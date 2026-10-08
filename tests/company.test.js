@@ -225,7 +225,7 @@ test('illness and humorous pause recover in active time and survive reload witho
   assert.equal(loaded.values.companyActiveTimeMs, activeTime); assert.equal(loaded.values.employees[0].status, 'TEMPORARILY_UNAVAILABLE');
   manager.accrue(120000); assert.equal(loaded.values.employees[0].status, 'WORKING'); assert.ok(manager.incomeRate() > 0);
   const funny = fixture(); funny.hire(); trigger(funny, 'shawarma'); funny.company.accrue(45000);
-  assert.equal(funny.state.values.employees[0].status, 'WORKING'); assert.ok(funny.state.values.companyLog.includes('Нашёлся. Просто обедал.'));
+  assert.equal(funny.state.values.employees[0].status, 'WORKING'); assert.ok(funny.state.values.companyLog.some(row => row.key === 'company-events.019'));
 });
 
 test('all four choice events resolve both branches, insufficient voluntary payments stay pending and duplicate choices do nothing', () => {
@@ -345,7 +345,7 @@ test('malformed saves sanitize all new fields, duplicates and exclusivity', () =
   assert.equal(state.values.companyVehicles.length, 1); assert.equal(state.values.employees.length, 2);
   assert.equal(state.values.employees.filter(e => e.assignedTransport).length, 1); assert.equal(state.values.employees[0].level, 10);
   assert.equal(state.values.employees[0].currentXp, 0); assert.equal(state.values.employees[0].reliability, 1.2);
-  assert.equal(state.values.companyBalance, 0); assert.deepEqual(state.values.companyEffects, []); assert.deepEqual(state.values.companyLog, ['ok']);
+  assert.equal(state.values.companyBalance, 0); assert.deepEqual(state.values.companyEffects, []); assert.deepEqual(state.values.companyLog, [{ key: 'company.log.legacy', variables: {}, legacyText: 'ok' }]);
   assert.equal(state.values.companyUpgrades.routing, 3); assert.equal(state.loadSaveData(null), false);
 });
 

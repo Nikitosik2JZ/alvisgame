@@ -1,4 +1,4 @@
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, stat, readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 async function walk(directory) {
@@ -14,5 +14,7 @@ async function walk(directory) {
 const files = await walk('dist');
 assert.ok(files.some(f => f.file === path.join('dist', 'index.html')), 'index.html must be at archive root');
 const bytes = files.reduce((sum, file) => sum + file.bytes, 0);
+const scripts = (await Promise.all(files.filter(f => f.file.endsWith('.js')).map(f => readFile(f.file, 'utf8')))).join('\n');
+assert.ok(scripts.includes('Курьерская Империя') && scripts.includes('Courier Empire') && scripts.includes("Where's My Cola?!"), 'Both complete translation dictionaries must ship in dist');
 assert.ok(bytes < 100000000, 'Uncompressed dist must be below 100 MB');
 console.log(`Yandex archive checks PASS: ${files.length} files, ${bytes} bytes (${(bytes / 1000000).toFixed(3)} MB / ${(bytes / 1048576).toFixed(3)} MiB), root index.html, ASCII names, no SDK/development files.`);

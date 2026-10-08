@@ -1,3 +1,4 @@
+import { t as tr } from '../services/LocalizationService.js';
 import { TASK_CONFIG, localTaskDate, validTaskDate, taskTier, streakMilestone } from '../config/taskConfig.js';
 import { DAILY_TASKS, instantiateTask, taskEligible, ROTATING_TASK_IDS, SESSION_CHALLENGES } from '../data/dailyTasks.js';
 
@@ -31,7 +32,7 @@ export class TaskManager {
       const firstSet = !s.dailyTaskDate;
       s.dailyTasks = this.select(date, TASK_CONFIG.dailyCount, false, s.dailyTasks); s.dailyTaskDate = date;
       s.dailyRewardTier = taskTier(s.level).id; s.dailyTaskCompletionBonusClaimed = false; s.dailyTaskSetCompleted = false; changed = true;
-      if (firstSet && !this.state.loadingProgression) this.emit('ЗАДАНИЯ ОТКРЫТЫ · Новые цели в меню ЗАДАНИЯ. Пропуски дней ничего не отнимают.');
+      if (firstSet && !this.state.loadingProgression) this.emit(tr('task-manager.001'));
     }
     if (s.level >= TASK_CONFIG.unlock.rotating && (s.rotatingChallengeDate !== date || !s.rotatingChallenge)) {
       s.rotatingChallenge = this.select(date, 1, true, s.rotatingChallenge ? [s.rotatingChallenge] : [])[0];
@@ -44,7 +45,7 @@ export class TaskManager {
       const d = SESSION_CHALLENGES[this.sessionSequence++ % SESSION_CHALLENGES.length];
       this.currentSessionChallenge = { ...d, target: d.id === 'session-speed' ? 1 : TASK_CONFIG.sessionTarget, currentProgress: 0,
         completed: false, claimed: false, accepted: false, reward: { ...TASK_CONFIG.sessionReward } }; changed = true;
-      if (!this.state.loadingProgression) this.emit(`НОВЫЙ ЧЕЛЛЕНДЖ · ${d.title}. Участие по желанию в меню ЗАДАНИЯ.`);
+      if (!this.state.loadingProgression) this.emit(tr('task-manager.002', { v0: d.title }));
     }
     return changed;
   }
@@ -56,9 +57,9 @@ export class TaskManager {
     const s = this.state.values;
     if (s.dailyTasks.includes(task)) s.dailyTasksCompleted++;
     else { s.totalChallengesCompleted++; if (task === s.rotatingChallenge) s.rotatingChallengesCompleted++; }
-    this.emit(`ЗАДАНИЕ ВЫПОЛНЕНО · ${task.title}. Награда в разделе ЗАДАНИЯ.`);
+    this.emit(tr('task-manager.003', { v0: task.title }));
     if (!s.dailyTaskSetCompleted && s.dailyTasks.length === TASK_CONFIG.dailyCount && s.dailyTasks.every(t => t.completed)) {
-      s.dailyTaskSetCompleted = true; s.dailySetsCompleted++; this.emit('ВСЕ ЗАДАНИЯ ВЫПОЛНЕНЫ · бонус доступен');
+      s.dailyTaskSetCompleted = true; s.dailySetsCompleted++; this.emit(tr('task-manager.004'));
     }
   }
   advance(type, payload = {}) {
@@ -80,7 +81,7 @@ export class TaskManager {
       task.currentProgress = Math.min(task.target, task.currentProgress + Math.max(0, amount));
       if (task.currentProgress >= task.target) this.complete(task);
       else if (['delivery', 'consecutive'].includes(task.type) && task.target > 2 && before < task.target - 1 && task.currentProgress === task.target - 1)
-        this.emit(`Остался 1 заказ · ${task.title}`);
+        this.emit(tr('task-manager.005', { v0: task.title }));
     }
     s.rotatingChallengeProgress = s.rotatingChallenge?.currentProgress || 0;
   }
@@ -90,7 +91,7 @@ export class TaskManager {
     const milestone = streakMilestone(s.currentDeliveryStreak);
     if (milestone) {
       s.xp += milestone.xp || 0; s.reputation += milestone.reputation || 0;
-      this.emit(`🔥 СЕРИЯ x${s.currentDeliveryStreak} · ${milestone.moneyBonus ? `+${Math.round(Math.min(TASK_CONFIG.streakBonusCap, milestone.moneyBonus) * 100)}% к оплате заказа` : `+${milestone.xp} XP`}`);
+      this.emit(tr('task-manager.007', { v0: s.currentDeliveryStreak, v1: milestone.moneyBonus ? tr('task-manager.006', { v0: Math.round(Math.min(TASK_CONFIG.streakBonusCap, milestone.moneyBonus) * 100) }) : tr('common.xpReward', { amount: milestone.xp }) }));
     }
     this.advance('delivery', payload);
     // Task/streak rewards are not gameplay earnings or reputation task progress.
@@ -98,7 +99,7 @@ export class TaskManager {
   }
   failure() {
     this.sync(); const s = this.state.values;
-    if (s.currentDeliveryStreak >= TASK_CONFIG.streakHUDMinimum) this.emit(`СЕРИЯ ПРЕРВАНА · Лучший результат: ${s.bestDeliveryStreak}`);
+    if (s.currentDeliveryStreak >= TASK_CONFIG.streakHUDMinimum) this.emit(tr('task-manager.008', { v0: s.bestDeliveryStreak }));
     s.currentDeliveryStreak = 0; this.advance('failed');
   }
   gameplayEvent(type, payload = {}) { this.sync(); this.advance(type, payload); }
@@ -110,7 +111,7 @@ export class TaskManager {
   claim(id, group = 'daily') {
     this.checkDate(); const s = this.state.values;
     const task = group === 'session' ? this.currentSessionChallenge : group === 'rotating' ? s.rotatingChallenge : s.dailyTasks.find(t => t.id === id);
-    if (!task || task.id !== id || !task.completed || task.claimed) return { ok: false, reason: 'Награда недоступна или уже получена' };
+    if (!task || task.id !== id || !task.completed || task.claimed) return { ok: false, reason: tr('achievement-manager.005') };
     task.claimed = true;
     if (group === 'session') { this.currentSessionChallenge = null; this.sessionOfferAfter = s.completedOrders + TASK_CONFIG.sessionCooldownDeliveries; }
     return this.pay(task.reward);
@@ -119,16 +120,16 @@ export class TaskManager {
   get bonusReward() { return taskTier(this.state.values.level).dailyBonus; }
   canClaimBonus() { const s = this.state.values; return s.level >= TASK_CONFIG.unlock.dailyBonus && Boolean(this.effectiveDate) && (!s.lastDailyBonusClaimDate || s.lastDailyBonusClaimDate < this.effectiveDate); }
   claimDailyBonus() {
-    this.checkDate(); if (!this.canClaimBonus()) return { ok: false, reason: 'Бонус сегодня уже получен' };
+    this.checkDate(); if (!this.canClaimBonus()) return { ok: false, reason: tr('task-manager.009') };
     this.state.values.lastDailyBonusClaimDate = this.effectiveDate; return this.pay(this.bonusReward);
   }
   claimCompletionBonus() {
     this.checkDate(); const s = this.state.values;
-    if (!s.dailyTaskSetCompleted || s.dailyTaskCompletionBonusClaimed) return { ok: false, reason: 'Бонус пока недоступен или уже получен' };
+    if (!s.dailyTaskSetCompleted || s.dailyTaskCompletionBonusClaimed) return { ok: false, reason: tr('task-manager.010') };
     s.dailyTaskCompletionBonusClaimed = true; return this.pay(this.completionReward);
   }
   acceptSession() {
-    this.checkDate(); if (!this.currentSessionChallenge || this.currentSessionChallenge.accepted) return { ok: false, reason: 'Нет нового челленджа' };
+    this.checkDate(); if (!this.currentSessionChallenge || this.currentSessionChallenge.accepted) return { ok: false, reason: tr('task-manager.011') };
     this.currentSessionChallenge.accepted = true; this.state.refresh(); return { ok: true };
   }
   declineSession() {

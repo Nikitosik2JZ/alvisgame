@@ -1,3 +1,4 @@
+import { t as tr } from '../services/LocalizationService.js';
 import { ModalUI } from './ModalUI.js';
 
 // Session preference survives district scene restarts and orientation changes.
@@ -17,7 +18,7 @@ export class HUDUI extends ModalUI {
       document.documentElement.classList.toggle('compact', this.media.matches);
       this.toggle.textContent = collapsed ? '▼' : '▲';
       this.toggle.setAttribute('aria-expanded', String(!collapsed));
-      this.toggle.setAttribute('aria-label', collapsed ? 'Развернуть HUD' : 'Свернуть HUD');
+      this.toggle.setAttribute('aria-label', collapsed ? tr('hudui.001') : tr('hudui.002'));
       (this.media.matches || collapsed ? document.querySelector('#menu-actions') : this.hud).append(this.actions);
       player.clearInput();
     };

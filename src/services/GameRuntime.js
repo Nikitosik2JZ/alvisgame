@@ -17,9 +17,9 @@ platform.on('accountClose', () => saves.switchAccount());
 export async function initializeRuntime() {
   try { saves.accountReload = sessionStorage.getItem('courier-account-reload') === '1'; sessionStorage.removeItem('courier-account-reload'); } catch { /* Optional guard. */ }
   await platform.initialize();
-  localization.initialize(platform.getLanguage());
+  if (!localization.initialized) throw new Error('Localization must initialize before game state');
   const result = await saves.initialize();
-  document.querySelector('.local-badge').textContent = platform.mode;
+  document.querySelector('.local-badge').textContent = localization.t(platform.isYandex() ? 'platform.yandex' : 'platform.local');
   document.querySelector('#loading').textContent = localization.t('loading');
   return result;
 }

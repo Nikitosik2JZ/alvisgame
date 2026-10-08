@@ -6,6 +6,9 @@ body { touch-action: none; }
 .modal-content { touch-action: pan-y; }
 input, textarea { user-select: text; -webkit-user-select: text; touch-action: manipulation; }
 #loading { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: #182b29; }
+.loading-spinner { width: 32px; height: 32px; border: 3px solid #ffffff30; border-top-color: #c4df8c; border-radius: 50%; animation: loading-spin 1s linear infinite; }
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+.shop-item, .modal-content p, .modal-content small { overflow-wrap: anywhere; }
 #result-actions { max-height: min(55dvh, 330px); overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
 #result-actions button { margin: 4px 0; }
 #rating-content li { overflow-wrap: anywhere; padding: 6px 0; }

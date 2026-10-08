@@ -1,3 +1,4 @@
+import { t as tr } from '../services/LocalizationService.js';
 import Phaser from 'phaser';
 import { Courier } from '../entities/Courier.js';
 import { createCity, WORLD } from '../world/createCity.js';
@@ -76,7 +77,7 @@ export class GameScene extends Phaser.Scene {
     this.deliveryEvents.modifiers.items.clear(); this.deliveryEvents.pending = null;
     gameState.nextCloseOrder = false;
     const notice = document.createElement('div'); notice.id = 'district-transition'; notice.setAttribute('role', 'status');
-    notice.textContent = `${DISTRICTS[gameState.values.selectedDistrict].name.toUpperCase()}\nЗагрузка района…`;
+    notice.textContent = tr('game-scene.001', { v0: DISTRICTS[gameState.values.selectedDistrict].name.toUpperCase() });
     document.body.append(notice);
     this.events.once('shutdown', () => notice.remove());
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart());

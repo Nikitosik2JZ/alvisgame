@@ -1,3 +1,5 @@
+import { t as tr } from '../services/LocalizationService.js';
+import { encodeMessage, message as logMessage, renderMessage } from '../services/LocalizedMessages.js';
 import { COMPANY } from '../config/companyConfig.js';
 import { COMPANY_EVENTS, COMPANY_EVENT_BALANCE as B } from '../data/companyEvents.js';
 
@@ -53,40 +55,41 @@ export class CompanyEventManager {
     s.companyBalance -= paid; return paid;
   }
   resolve(choice = 0) {
-    if (!this.active || this.active.resolved) return { ok: false, reason: 'Событие уже завершено' };
+    if (!this.active || this.active.resolved) return { ok: false, reason: tr('company-event-manager.001') };
     const { event, employeeId } = this.active, s = this.state.values;
-    if (event.choices && (!Number.isInteger(choice) || !event.choices[choice])) return { ok: false, reason: 'Выберите вариант' };
+    if (event.choices && (!Number.isInteger(choice) || !event.choices[choice])) return { ok: false, reason: tr('company-event-manager.002') };
     const employee = s.employees.find(e => e.id === employeeId), effects = { ...(event.choices?.[choice]?.effects || event.effects) };
-    if (effects.cost && s.money < effects.cost) return { ok: false, reason: 'Не хватает личных денег. Выберите другой вариант.' };
+    if (effects.cost && s.money < effects.cost) return { ok: false, reason: tr('company-event-manager.003') };
     this.company.tick(); // Settle preceding time before changing rates.
     const lines = []; let bad = event.category === 'NEGATIVE';
     if (effects.dispute && this.company.roll() < B.disputeSuccessChance) {
-      delete effects.fine; delete effects.reputation; delete effects.failure; lines.push('Штраф отменён.');
+      delete effects.fine; delete effects.reputation; delete effects.failure; lines.push(logMessage('company-event-manager.004'));
     }
-    if (effects.cost) { s.money -= effects.cost; lines.push(`Оплачено: ${effects.cost} ₽.`); }
+    if (effects.cost) { s.money -= effects.cost; lines.push(logMessage('company-event-manager.005', { v0: effects.cost })); }
     const money = effects.money || 0;
-    if (money > 0) { const credited = this.company.creditBonus(money); lines.push(`В компанию: +${credited} ₽.`); }
-    if (money < 0 || effects.fine) { lines.push(`Штраф: ${this.fine(effects.fine || -money)} ₽ (с учётом защиты баланса).`); bad = true; }
-    if (effects.reputation) { this.company.reputation(effects.reputation); lines.push(`Репутация компании: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}.`); }
+    if (money > 0) { const credited = this.company.creditBonus(money); lines.push(logMessage('company-event-manager.006', { v0: credited })); }
+    if (money < 0 || effects.fine) { lines.push(logMessage('company-event-manager.007', { v0: this.fine(effects.fine || -money) })); bad = true; }
+    if (effects.reputation) { this.company.reputation(effects.reputation); lines.push(logMessage('company-event-manager.008', { v0: effects.reputation > 0 ? '+' : '', v1: effects.reputation })); }
     if (effects.permanentEfficiency && employee) {
       employee.permanentEfficiencyBonus = Math.min(COMPANY.permanentBonusCap, employee.permanentEfficiencyBonus + B.bonusEfficiency);
-      lines.push(`Постоянный бонус эффективности: +${Math.round(employee.permanentEfficiencyBonus * 100)}%.`);
+      lines.push(logMessage('company-event-manager.009', { v0: Math.round(employee.permanentEfficiencyBonus * 100) }));
     }
     for (const kind of ['companyIncome', 'employeeIncome', 'risk']) if (effects[kind]) {
       s.companyEffects.push({ kind, value: effects[kind], until: s.companyActiveTimeMs + effects.duration * 1000, employeeId: kind === 'employeeIncome' ? employeeId : null });
-      lines.push(`${kind === 'risk' ? 'Риск провала' : kind === 'employeeIncome' ? 'Доход курьера' : 'Доход компании'}: ${Math.round(effects[kind] * 100)}% · ${effects.duration} сек.`);
+      lines.push(logMessage('company-event-manager.012', { v0: kind === 'risk' ? logMessage('company-event-manager.010') : kind === 'employeeIncome' ? logMessage('company-event-manager.011') : logMessage('progression-config.027'), v1: Math.round(effects[kind] * 100), v2: effects.duration }));
       if (effects[kind] < 0) bad = true;
     }
     if (effects.unavailable && employee) {
       employee.status = 'TEMPORARILY_UNAVAILABLE'; employee.unavailableUntil = s.companyActiveTimeMs + effects.duration * 1000;
-      employee.recoveryMessage = effects.recovery || ''; lines.push(`${employee.name}: перерыв ${effects.duration} сек. игрового времени.`);
+      employee.recoveryMessage = encodeMessage(effects.recovery || ''); lines.push(logMessage('company-event-manager.013', { v0: employee.name, v1: effects.duration }));
     }
     if (effects.failure && employee) { employee.failedDeliveries++; s.companyStats.employeeFailures++; }
     const memory = s.companyEventState; memory.lastId = event.id; memory.negativeStreak = bad ? memory.negativeStreak + 1 : 0;
     if (bad) s.companyStats.negativeEvents++; else if (event.category === 'POSITIVE' || effects.companyIncome > 0 || effects.permanentEfficiency) s.companyStats.positiveEvents++;
     this.active.resolved = true;
-    const message = lines.join('\n') || 'Без последствий.';
-    this.company.log(`${event.title} · ${employee?.name || 'Компания'}: ${message}`);
+    const detail = lines.length ? { parts: lines, separator: '\n' } : logMessage('company-event-manager.014');
+    const message = renderMessage(detail);
+    this.company.log(logMessage('company.log.event', { title: encodeMessage(event.title), name: encodeMessage(employee?.name || tr('progression-config.020')), detail }));
     s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.company.incomeRate());
     this.state.refresh(); return { ok: true, message };
   }

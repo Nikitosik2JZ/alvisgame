@@ -1,3 +1,4 @@
+import { t as tr } from '../services/LocalizationService.js';
 // Entrances sit on walkable ground outside the existing static building bodies.
 export const restaurants = [
   { id: 'burger', name: 'Burger House', x: 670, y: 795, building: 'MARKET', color: 0xf5b75d },
@@ -6,27 +7,27 @@ export const restaurants = [
 ];
 
 export const customers = [
-  { id: 'west-north', name: 'Клиент · Запад', x: 150, y: 840 },
-  { id: 'north', name: 'Клиент · Север', x: 952, y: 795 },
-  { id: 'east-north', name: 'Клиент · Восток', x: 2245, y: 840 },
-  { id: 'center-south', name: 'Клиент · Почта', x: 952, y: 1490 },
-  { id: 'south', name: 'Клиент · Юг', x: 1792, y: 1490 },
-  { id: 'east-south', name: 'Клиент · Набережная', x: 2245, y: 1510 },
+  { id: 'west-north', name: tr('delivery-locations.001'), x: 150, y: 840 },
+  { id: 'north', name: tr('delivery-locations.002'), x: 952, y: 795 },
+  { id: 'east-north', name: tr('delivery-locations.003'), x: 2245, y: 840 },
+  { id: 'center-south', name: tr('delivery-locations.004'), x: 952, y: 1490 },
+  { id: 'south', name: tr('delivery-locations.005'), x: 1792, y: 1490 },
+  { id: 'east-south', name: tr('delivery-locations.006'), x: 2245, y: 1510 },
 ];
 
 export function districtDeliveryLocations(id = 'residential') {
-  const sources = restaurants.map(r => ({ ...r, name: id === 'industrial' ? `Склад · ${r.name}` : id === 'business' ? `Кафе · ${r.name}` : r.name }));
+  const sources = restaurants.map(r => ({ ...r, name: id === 'industrial' ? tr('delivery-locations.007', { v0: r.name }) : id === 'business' ? tr('delivery-locations.008', { v0: r.name }) : r.name }));
   const destinations = id === 'industrial' || id === 'business' ? [
-    { id: 'gate-north-west', name: id === 'industrial' ? 'Склад · Западные ворота' : 'Офис · Запад', x: 150, y: 270 },
-    { id: 'gate-north-east', name: id === 'industrial' ? 'Склад · Восточные ворота' : 'Офис · Восток', x: 2245, y: 270 },
-    { id: 'gate-south-west', name: id === 'industrial' ? 'Цех · Южные ворота' : 'Корпорация · Юг', x: 150, y: 1860 },
-    { id: 'gate-south-east', name: id === 'industrial' ? 'Склад · Отгрузка' : 'Бизнес-центр · Юг', x: 2245, y: 1860 },
-    { id: 'gate-north', name: 'Клиент · Северный въезд', x: 1200, y: 270 },
-    { id: 'gate-south', name: 'Клиент · Южный въезд', x: 1200, y: 1900 },
-    { id: 'gate-west', name: id === 'industrial' ? 'Цех · Центральные ворота' : 'Офис · Западная площадь', x: 150, y: 1000 },
-    { id: 'gate-east', name: id === 'industrial' ? 'Склад · Центральные ворота' : 'Офис · Восточная площадь', x: 2245, y: 1000 },
+    { id: 'gate-north-west', name: id === 'industrial' ? tr('delivery-locations.009') : tr('delivery-locations.010'), x: 150, y: 270 },
+    { id: 'gate-north-east', name: id === 'industrial' ? tr('delivery-locations.011') : tr('delivery-locations.012'), x: 2245, y: 270 },
+    { id: 'gate-south-west', name: id === 'industrial' ? tr('delivery-locations.013') : tr('delivery-locations.014'), x: 150, y: 1860 },
+    { id: 'gate-south-east', name: id === 'industrial' ? tr('delivery-locations.015') : tr('delivery-locations.016'), x: 2245, y: 1860 },
+    { id: 'gate-north', name: tr('delivery-locations.017'), x: 1200, y: 270 },
+    { id: 'gate-south', name: tr('delivery-locations.018'), x: 1200, y: 1900 },
+    { id: 'gate-west', name: id === 'industrial' ? tr('delivery-locations.019') : tr('delivery-locations.020'), x: 150, y: 1000 },
+    { id: 'gate-east', name: id === 'industrial' ? tr('delivery-locations.021') : tr('delivery-locations.022'), x: 2245, y: 1000 },
     ...customers.filter(c => c.id.startsWith('east')).map(c => ({ ...c })),
-  ] : customers.map(c => ({ ...c, name: id === 'elite' ? c.name.replace('Клиент', 'Вилла') : c.name }));
+  ] : customers.map(c => ({ ...c, name: id === 'elite' ? c.name.replace(tr('delivery-locations.023'), tr('delivery-locations.024')) : c.name }));
   return { restaurants: sources, customers: destinations };
 }
 
@@ -34,7 +35,7 @@ export function createDeliveryLocations(scene, locations = { restaurants, custom
   for (const place of [...locations.restaurants, ...locations.customers]) {
     const isRestaurant = 'building' in place;
     scene.add.circle(place.x, place.y, 18, isRestaurant ? place.color : 0x9fb8eb, 0.9).setDepth(2);
-    scene.add.text(place.x, place.y, isRestaurant ? 'R' : 'К', {
+    scene.add.text(place.x, place.y, isRestaurant ? tr('common.restaurantMarker') : tr('delivery-locations.025'), {
       fontFamily: 'Arial', fontSize: '18px', fontStyle: 'bold', color: '#182b29',
     }).setOrigin(0.5).setDepth(2);
     scene.add.text(place.x, place.y + 28, place.name, {

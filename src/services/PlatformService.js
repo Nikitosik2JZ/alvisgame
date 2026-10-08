@@ -19,6 +19,7 @@ export class PlatformService {
         && !import.meta.env?.DEV) await this.loadScript();
       if (this.host?.YaGames?.init) {
         this.sdk = await withTimeout(this.host.YaGames.init(), C.sdkTimeoutMs);
+        this.language = this.sdk.environment?.i18n?.lang;
         this.mode = 'YANDEX'; this.subscribeSDK();
         this.getServerTime();
         await this.reacquirePlayer();
@@ -47,7 +48,7 @@ export class PlatformService {
   }
   isPlatformAvailable() { return Boolean(this.sdk); }
   isYandex() { return this.mode === 'YANDEX'; }
-  getLanguage() { return this.sdk?.environment?.i18n?.lang || 'ru'; }
+  getLanguage() { return this.isYandex() ? this.language ?? '' : 'ru'; }
   getDeviceType() {
     return this.sdk?.deviceInfo?.type || (this.host?.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'desktop');
   }

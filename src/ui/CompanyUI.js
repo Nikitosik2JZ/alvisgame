@@ -1,8 +1,11 @@
+import { formatNumber } from '../services/LocalizationService.js';
+import { renderMessage } from '../services/LocalizedMessages.js';
+import { t as tr } from '../services/LocalizationService.js';
 import { ModalUI } from './ModalUI.js';
 import { COMPANY, companyLevel, companyVehicle, archetypeFor, companyRank, employeeXpRequired, upgradeEffect } from '../config/companyConfig.js';
 import { companyDistrictBonus } from '../config/districtConfig.js';
 
-const rubles = value => `${Math.floor(value).toLocaleString('ru-RU')} ₽`;
+const rubles = value => `${formatNumber(Math.floor(value))} ₽`;
 const text = (root, selector, value) => { root.querySelector(selector).textContent = value; };
 const percent = value => `${Math.round(value * 100)}%`;
 
@@ -13,7 +16,7 @@ export class CompanyUI extends ModalUI {
     this.pendingOffline = manager.offlineEarned > 0 && !manager.offlineNoticeShown; this.employeeSignature = null;
     this.nameInput = this.dialog.querySelector('#company-name'); this.nameInput.maxLength = COMPANY.nameLimit;
     this.nameInput.value = state.getSnapshot().companyName;
-    text(this.dialog, '#company-name-hint', `До ${COMPANY.nameLimit} символов. Пустое название: «${COMPANY.defaultName}».`);
+    text(this.dialog, '#company-name-hint', tr('company-ui.001', { v0: COMPANY.nameLimit, v1: COMPANY.defaultName }));
     this.perform = (action, success) => {
       const result = action();
       text(this.dialog, '#company-feedback', result.ok ? success : result.reason);
@@ -22,23 +25,23 @@ export class CompanyUI extends ModalUI {
     this.dialog.querySelector('#company-name-form').onsubmit = event => {
       event.preventDefault();
       if (state.getSnapshot().companyUnlocked) {
-        if (this.perform(() => manager.rename(this.nameInput.value), 'Название сохранено.').ok) this.nameInput.value = state.getSnapshot().companyName;
+        if (this.perform(() => manager.rename(this.nameInput.value), tr('company-ui.002')).ok) this.nameInput.value = state.getSnapshot().companyName;
       }
       else this.dialog.querySelector('#company-open').click();
     };
     this.dialog.querySelector('#company-open').onclick = () => {
-      if (this.perform(() => manager.openCompany(this.nameInput.value), 'Компания открыта!').ok) {
+      if (this.perform(() => manager.openCompany(this.nameInput.value), tr('company-ui.003')).ok) {
         this.view = 'celebration'; this.render(state.getSnapshot()); this.dialog.querySelector('#company-begin').focus();
       }
     };
     const dashboard = () => { this.view = 'dashboard'; this.render(state.getSnapshot()); this.dialog.querySelector('[data-company-view="dashboard"]').focus(); };
     this.dialog.querySelector('#company-begin').onclick = dashboard;
     this.dialog.querySelector('#company-offline-later').onclick = dashboard;
-    const collect = () => this.perform(() => manager.collect(), 'Доход переведён на ваш личный баланс.');
+    const collect = () => this.perform(() => manager.collect(), tr('company-ui.004'));
     this.dialog.querySelector('#company-collect').onclick = collect;
     this.dialog.querySelector('#company-offline-collect').onclick = () => { if (collect().ok) dashboard(); };
-    this.dialog.querySelector('#company-refresh').onclick = () => this.perform(() => manager.refreshCandidates(), 'Новые кандидаты готовы к собеседованию.');
-    this.dialog.querySelector('#company-upgrade').onclick = () => this.perform(() => manager.upgrade(), 'Компания улучшена. Открыты новые места!');
+    this.dialog.querySelector('#company-refresh').onclick = () => this.perform(() => manager.refreshCandidates(), tr('company-ui.005'));
+    this.dialog.querySelector('#company-upgrade').onclick = () => this.perform(() => manager.upgrade(), tr('company-ui.006'));
     for (const button of this.dialog.querySelectorAll('[data-company-view]')) button.onclick = () => {
       this.view = button.dataset.companyView; this.render(state.getSnapshot()); this.dialog.querySelector('.modal-content').scrollTop = 0;
     };
@@ -47,7 +50,7 @@ export class CompanyUI extends ModalUI {
       const card = document.createElement('article'); card.className = 'shop-item'; card.dataset.upgrade = key;
       card.innerHTML = '<h3></h3><p></p><button></button>';
       card.querySelector('h3').textContent = config.name;
-      card.querySelector('button').onclick = () => this.perform(() => manager.upgradeBranch(key), 'Улучшение установлено.');
+      card.querySelector('button').onclick = () => this.perform(() => manager.upgradeBranch(key), tr('company-ui.007'));
       upgrades.append(card);
     }
     const fleet = this.dialog.querySelector('#company-vehicles'); fleet.replaceChildren();
@@ -55,9 +58,9 @@ export class CompanyUI extends ModalUI {
       const card = document.createElement('article'); card.className = 'shop-item'; card.dataset.companyVehicle = vehicle.type;
       card.innerHTML = '<h3></h3><p data-inventory></p><p data-rate></p><button></button>';
       card.querySelector('h3').textContent = vehicle.name;
-      card.querySelector('[data-rate]').textContent = `Доход новичка: ${rubles(COMPANY.baseIncome * COMPANY.transportMultipliers[vehicle.type])} / мин`;
-      const button = card.querySelector('button'); button.textContent = `КУПИТЬ — ${rubles(vehicle.price)}`;
-      button.onclick = () => this.perform(() => manager.buyVehicle(vehicle.type), 'Транспорт куплен для компании. Назначьте его курьеру.');
+      card.querySelector('[data-rate]').textContent = tr('company-ui.008', { v0: rubles(COMPANY.baseIncome * COMPANY.transportMultipliers[vehicle.type]) });
+      const button = card.querySelector('button'); button.textContent = tr('company-ui.009', { v0: rubles(vehicle.price) });
+      button.onclick = () => this.perform(() => manager.buyVehicle(vehicle.type), tr('company-ui.010'));
       fleet.append(card);
     }
     this.onCompanyClose = () => { this.view = 'dashboard'; this.render(state.getSnapshot()); };
@@ -77,47 +80,47 @@ export class CompanyUI extends ModalUI {
     this.dialog.querySelector('#company-name-form').hidden = special || (unlocked && this.view !== 'dashboard');
     this.dialog.querySelector('#company-rename').hidden = !unlocked;
     if (this.previousName !== s.companyName) { this.nameInput.value = s.companyName; this.previousName = s.companyName; }
-    text(this.dialog, '#company-wallet', `Личные деньги: ${rubles(s.money)} · Уровень ${s.level}`);
-    text(this.dialog, '#company-requirements', `Требуется уровень ${COMPANY.unlockLevel} · Ваш: ${s.level}\nСтоимость открытия: ${rubles(COMPANY.unlockPrice)}\nНе хватает: ${rubles(Math.max(0, COMPANY.unlockPrice - s.money))}`);
+    text(this.dialog, '#company-wallet', tr('company-ui.011', { v0: rubles(s.money), v1: s.level }));
+    text(this.dialog, '#company-requirements', tr('company-ui.012', { v0: COMPANY.unlockLevel, v1: s.level, v2: rubles(COMPANY.unlockPrice), v3: rubles(Math.max(0, COMPANY.unlockPrice - s.money)) }));
     // Keep the action usable so unmet requirements have an explicit explanation.
     text(this.dialog, '#company-display-name', `«${s.companyName}»`);
-    text(this.dialog, '#company-offline-earned', `Ваши курьеры заработали ${rubles(this.manager.offlineEarned)}. Всего накоплено: ${rubles(s.companyBalance)}.`);
-    text(this.dialog, '#company-offline-limit', `Доход за отсутствие — максимум ${COMPANY.offlineCapMs / 3600000} ч. Кнопка забирает весь накопленный баланс.`);
+    text(this.dialog, '#company-offline-earned', tr('company-ui.013', { v0: rubles(this.manager.offlineEarned), v1: rubles(s.companyBalance) }));
+    text(this.dialog, '#company-offline-limit', tr('company-ui.014', { v0: COMPANY.offlineCapMs / 3600000 }));
     for (const panel of this.dialog.querySelectorAll('[data-company-panel]')) panel.hidden = panel.dataset.companyPanel !== this.view;
     for (const button of this.dialog.querySelectorAll('[data-company-view]')) button.setAttribute('aria-pressed', String(button.dataset.companyView === this.view));
     const summary = this.dialog.querySelector('#company-summary'); summary.replaceChildren();
     const efficiency = s.employees.length ? s.employees.reduce((sum, e) => sum + this.manager.employeeEfficiency(e, s), 0) / s.employees.length : 1;
-    for (const [label, value] of [ ['Ранг компании', companyRank(s.companyReputation).name], ['Офис', `${current.name} · Ур. ${s.officeLevel}`], ['Курьеров', `${s.employees.length} / ${current.slots}`],
-      ['Доход компании', `${rubles(this.manager.incomeRate(s))} / мин`], ['Бонус районов', `+${Math.round(companyDistrictBonus(s) * 100)}%`], ['Заработано компанией', rubles(s.companyLifetimeEarnings)],
-      ['Эффективность', percent(efficiency)], ['Репутация компании', s.companyReputation.toFixed(1)],
-      ['Заказы сотрудников', s.companyStats.employeeDeliveries], ['Провалено', s.companyStats.employeeFailures],
-      ['Хороших / плохих событий', `${s.companyStats.positiveEvents} / ${s.companyStats.negativeEvents}`], ['Рекорд дохода', `${rubles(s.companyStats.highestIncomePerMinute)} / мин`],
-      ['Свободных мест', current.slots - s.employees.length], ['Нанято за всё время', s.companyStats.employeesHired],
-      ['Транспорта компании', s.companyVehicles.length], ['Забрано дохода', rubles(s.companyStats.totalIncomeCollected)] ]) {
+    for (const [label, value] of [ [tr('company-ui.015'), companyRank(s.companyReputation).name], [tr('company-ui.016'), tr('company-ui.017', { v0: current.name, v1: s.officeLevel })], [tr('company-ui.018'), `${s.employees.length} / ${current.slots}`],
+      [tr('progression-config.027'), tr('company-ui.019', { v0: rubles(this.manager.incomeRate(s)) })], [tr('company-ui.020'), `+${Math.round(companyDistrictBonus(s) * 100)}%`], [tr('company-ui.021'), rubles(s.companyLifetimeEarnings)],
+      [tr('company-config.033'), percent(efficiency)], [tr('company-ui.022'), formatNumber(s.companyReputation, { minimumFractionDigits: 1, maximumFractionDigits: 1 })],
+      [tr('company-ui.023'), s.companyStats.employeeDeliveries], [tr('company-ui.024'), s.companyStats.employeeFailures],
+      [tr('company-ui.025'), `${s.companyStats.positiveEvents} / ${s.companyStats.negativeEvents}`], [tr('company-ui.026'), tr('company-ui.019', { v0: rubles(s.companyStats.highestIncomePerMinute) })],
+      [tr('company-ui.027'), current.slots - s.employees.length], [tr('company-ui.028'), s.companyStats.employeesHired],
+      [tr('company-ui.029'), s.companyVehicles.length], [tr('company-ui.030'), rubles(s.companyStats.totalIncomeCollected)] ]) {
       const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = label; dd.textContent = value; summary.append(dt, dd);
     }
     text(this.dialog, '#company-balance', rubles(s.companyBalance));
-    text(this.dialog, '#company-storage', `Хранилище: до ${rubles(this.manager.storageLimit(s))} (${COMPANY.storageCapMs / 3600000} ч дохода). ${s.companyBalance >= this.manager.storageLimit(s) && s.employees.length ? 'Заполнено — заберите деньги.' : 'Доход ожидает сбора.'}`);
+    text(this.dialog, '#company-storage', tr('company-ui.033', { v0: rubles(this.manager.storageLimit(s)), v1: COMPANY.storageCapMs / 3600000, v2: s.companyBalance >= this.manager.storageLimit(s) && s.employees.length ? tr('company-ui.031') : tr('company-ui.032') }));
     this.dialog.querySelector('#company-collect').disabled = s.companyBalance <= 0;
-    text(this.dialog, '#company-capacity', `Курьеров: ${s.employees.length} / ${current.slots} · Свободных мест: ${current.slots - s.employees.length}`);
-    text(this.dialog, '#company-hire-status', s.employees.length >= current.slots ? 'НЕТ СВОБОДНЫХ МЕСТ. Улучшите офис.' : 'Без транспорта курьер работает пешком. Найм оплачивается личными деньгами.');
+    text(this.dialog, '#company-capacity', tr('company-ui.034', { v0: s.employees.length, v1: current.slots, v2: current.slots - s.employees.length }));
+    text(this.dialog, '#company-hire-status', s.employees.length >= current.slots ? tr('company-manager.010') : tr('company-ui.035'));
     this.renderCandidates(s);
-    text(this.dialog, '#company-refresh', `ОБНОВИТЬ КАНДИДАТОВ — ${s.candidateRefreshes === 0 ? 'БЕСПЛАТНО' : rubles(COMPANY.refreshCost)}`);
-    text(this.dialog, '#company-upgrade-title', next ? `${current.name} → ${next.name}` : `${current.name} · МАКСИМУМ`);
-    text(this.dialog, '#company-upgrade-details', `Уровень ${s.officeLevel}${next ? ` → ${next.level}` : ''}\nКурьеров: ${current.slots}${next ? ` → ${next.slots}` : ''}\nДоход: +${percent(current.bonus)}${next ? ` → +${percent(next.bonus)}\nЦена: ${rubles(next.price)}` : ''}`);
+    text(this.dialog, '#company-refresh', tr('company-ui.037', { v0: s.candidateRefreshes === 0 ? tr('company-ui.036') : rubles(COMPANY.refreshCost) }));
+    text(this.dialog, '#company-upgrade-title', next ? `${current.name} → ${next.name}` : tr('company-ui.038', { v0: current.name }));
+    text(this.dialog, '#company-upgrade-details', tr('company-ui.040', { v0: s.officeLevel, v1: next ? ` → ${next.level}` : '', v2: current.slots, v3: next ? ` → ${next.slots}` : '', v4: percent(current.bonus), v5: next ? tr('company-ui.039', { v0: percent(next.bonus), v1: rubles(next.price) }) : '' }));
     this.dialog.querySelector('#company-upgrade').disabled = !next;
     for (const [key, config] of Object.entries(COMPANY.upgrades)) {
       const card = this.dialog.querySelector(`[data-upgrade="${key}"]`), level = s.companyUpgrades[key], price = config.costs[level];
       const max = price === undefined;
-      text(card, 'p', `Уровень ${level}${max ? ' · МАКСИМУМ' : ` → ${level + 1}`}\n${config.label}: +${percent(upgradeEffect(key, s))}${max ? '' : ` → +${percent(config.effects[level + 1])}`}\n${max ? 'Все уровни открыты.' : `Цена: ${rubles(price)}`}`);
-      text(card, 'button', max ? 'МАКСИМУМ' : `УЛУЧШИТЬ — ${rubles(price)}`); card.querySelector('button').disabled = max;
+      text(card, 'p', tr('company-ui.044', { v0: level, v1: max ? tr('company-ui.041') : ` → ${level + 1}`, v2: config.label, v3: percent(upgradeEffect(key, s)), v4: max ? '' : ` → +${percent(config.effects[level + 1])}`, v5: max ? tr('company-ui.042') : tr('company-ui.043', { v0: rubles(price) }) }));
+      text(card, 'button', max ? tr('company-ui.045') : tr('company-ui.046', { v0: rubles(price) })); card.querySelector('button').disabled = max;
     }
     for (const vehicle of COMPANY.vehicles) {
       const owned = s.companyVehicles.filter(v => v.type === vehicle.type), used = owned.filter(v => s.employees.some(e => e.assignedTransport === v.id)).length;
-      text(this.dialog, `[data-company-vehicle="${vehicle.type}"] [data-inventory]`, `Всего: ${owned.length} · Используется: ${used} · Свободно: ${owned.length - used}`);
+      text(this.dialog, `[data-company-vehicle="${vehicle.type}"] [data-inventory]`, tr('company-ui.047', { v0: owned.length, v1: used, v2: owned.length - used }));
     }
     const log = this.dialog.querySelector('#company-log'); log.replaceChildren();
-    for (const message of s.companyLog) { const item = document.createElement('li'); item.textContent = message; log.append(item); }
+    for (const message of s.companyLog) { const item = document.createElement('li'); item.textContent = renderMessage(message); log.append(item); }
     this.renderEmployees(s);
   }
 
@@ -125,15 +128,15 @@ export class CompanyUI extends ModalUI {
     const signature = JSON.stringify(s.companyCandidates), list = this.dialog.querySelector('#company-candidates');
     if (signature !== this.candidateSignature) {
       this.candidateSignature = signature; list.replaceChildren();
-      if (!s.companyCandidates.length) { const note = document.createElement('p'); note.textContent = 'Кандидатов не осталось. Обновите список.'; list.append(note); }
+      if (!s.companyCandidates.length) { const note = document.createElement('p'); note.textContent = tr('company-ui.048'); list.append(note); }
       for (const candidate of s.companyCandidates) {
         const card = document.createElement('article'); card.className = 'shop-item'; card.dataset.candidate = candidate.id;
-        card.innerHTML = '<h3></h3><p></p><small></small><button>НАНЯТЬ</button>';
+        card.innerHTML = tr('company-ui.049');
         text(card, 'h3', `${candidate.name} · ${archetypeFor(candidate.archetype).name}`);
-        text(card, 'p', `Эффективность: ${percent(candidate.efficiency)} · Надёжность: ${percent(candidate.reliability)}\nСкорость: ${percent(candidate.speed)} · Стоимость: ${rubles(candidate.price)}`);
+        text(card, 'p', tr('company-ui.050', { v0: percent(candidate.efficiency), v1: percent(candidate.reliability), v2: percent(candidate.speed), v3: rubles(candidate.price) }));
         const config = archetypeFor(candidate.archetype);
-        text(card, 'small', `Офлайн: ${percent(config.offline)} дохода. ${candidate.archetype === 'FAST' ? 'Скорость сильнее влияет на доход с транспортом.' : candidate.archetype === 'ACCURATE' ? 'Надёжность снижает риск разбитых заказов.' : candidate.archetype === 'WORKAHOLIC' ? 'Лучше работает во время вашего отсутствия.' : 'Сравните параметры с остальными кандидатами.'}`);
-        card.querySelector('button').onclick = () => this.perform(() => this.manager.hire(candidate.id), 'Курьер вышел на линию!'); list.append(card);
+        text(card, 'small', tr('company-ui.055', { v0: percent(config.offline), v1: candidate.archetype === 'FAST' ? tr('company-ui.051') : candidate.archetype === 'ACCURATE' ? tr('company-ui.052') : candidate.archetype === 'WORKAHOLIC' ? tr('company-ui.053') : tr('company-ui.054') }));
+        card.querySelector('button').onclick = () => this.perform(() => this.manager.hire(candidate.id), tr('company-ui.056')); list.append(card);
       }
     }
     for (const button of list.querySelectorAll('button')) button.disabled = s.employees.length >= companyLevel(s.officeLevel).slots;
@@ -144,40 +147,40 @@ export class CompanyUI extends ModalUI {
     const list = this.dialog.querySelector('#company-employees');
     if (signature !== this.employeeSignature) {
       this.employeeSignature = signature; list.replaceChildren();
-      if (!s.employees.length) { const note = document.createElement('p'); note.textContent = 'Курьеров пока нет. Наймите первого помощника.'; list.append(note); }
+      if (!s.employees.length) { const note = document.createElement('p'); note.textContent = tr('company-ui.057'); list.append(note); }
       for (const employee of s.employees) {
         const card = document.createElement('article'); card.className = 'shop-item'; card.dataset.employee = employee.id;
-        card.innerHTML = '<h3></h3><p data-employee-status></p><p data-employee-earned></p><details><summary>ОТКРЫТЬ · ПАРАМЕТРЫ</summary><dl class="company-summary" data-employee-detail></dl><p data-income-formula></p></details><label>Транспорт курьера<select></select></label><button>НАЗНАЧИТЬ ТРАНСПОРТ</button>';
+        card.innerHTML = tr('company-ui.058');
         const select = card.querySelector('select');
-        select.add(new Option('Пешком', ''));
+        select.add(new Option(tr('company-ui.059'), ''));
         s.companyVehicles.forEach((vehicle, index) => {
           const assigned = s.employees.find(e => e.assignedTransport === vehicle.id && e.id !== employee.id);
-          const option = new Option(`${companyVehicle(vehicle.type).name} №${index + 1}${assigned ? ` · занят: ${assigned.name}` : ''}`, vehicle.id);
+          const option = new Option(`${companyVehicle(vehicle.type).name} №${index + 1}${assigned ? tr('company-ui.060', { v0: assigned.name }) : ''}`, vehicle.id);
           option.disabled = Boolean(assigned); select.add(option);
         });
         select.value = employee.assignedTransport || '';
-        card.querySelector('button').onclick = () => this.perform(() => this.manager.assignVehicle(employee.id, select.value || null), 'Транспорт назначен.');
+        card.querySelector('button').onclick = () => this.perform(() => this.manager.assignVehicle(employee.id, select.value || null), tr('company-ui.061'));
         list.append(card);
       }
     }
     for (const employee of s.employees) {
       const card = list.querySelector(`[data-employee="${employee.id}"]`);
       const vehicle = s.companyVehicles.find(v => v.id === employee.assignedTransport);
-      text(card, 'h3', `${employee.name} · Ур. ${employee.level}`);
-      const status = employee.status === 'WORKING' ? 'РАБОТАЕТ' : employee.status === 'IDLE' ? 'ОЖИДАЕТ' : `ПЕРЕРЫВ · ${Math.ceil((employee.unavailableUntil - s.companyActiveTimeMs) / 1000)} сек.`;
-      text(card, '[data-employee-status]', `${archetypeFor(employee.archetype).name} · ${companyVehicle(vehicle?.type)?.name || 'Пешком'} · ${rubles(this.manager.employeeRate(employee, s))} / мин · ${status}`);
-      text(card, '[data-employee-earned]', `Надёжность: ${percent(this.manager.employeeReliability(employee))} · Заработал: ${rubles(employee.totalEarned)}`);
+      text(card, 'h3', tr('company-ui.017', { v0: employee.name, v1: employee.level }));
+      const status = employee.status === 'WORKING' ? tr('company-ui.062') : employee.status === 'IDLE' ? tr('company-ui.063') : tr('company-ui.064', { v0: Math.ceil((employee.unavailableUntil - s.companyActiveTimeMs) / 1000) });
+      text(card, '[data-employee-status]', tr('company-ui.065', { v0: archetypeFor(employee.archetype).name, v1: companyVehicle(vehicle?.type)?.name || tr('company-ui.059'), v2: rubles(this.manager.employeeRate(employee, s)), v3: status }));
+      text(card, '[data-employee-earned]', tr('company-ui.066', { v0: percent(this.manager.employeeReliability(employee)), v1: rubles(employee.totalEarned) }));
       const detail = card.querySelector('[data-employee-detail]'); detail.replaceChildren();
-      for (const [label, value] of [['Тип', archetypeFor(employee.archetype).name], ['Уровень', employee.level],
-        ['Опыт', employee.level === COMPANY.employeeMaxLevel ? 'МАКСИМУМ' : `${Math.floor(employee.currentXp)} / ${employeeXpRequired(employee.level)}`],
-        ['Эффективность', percent(this.manager.employeeEfficiency(employee, s))], ['Надёжность', percent(this.manager.employeeReliability(employee))],
-        ['Скорость', percent(employee.speed)], ['Транспорт', companyVehicle(vehicle?.type)?.name || 'Пешком'], ['Доход', `${rubles(this.manager.employeeRate(employee, s))} / мин`],
-        ['Заработано всего', rubles(employee.totalEarned)], ['Успешных заказов', employee.successfulDeliveries], ['Провалено', employee.failedDeliveries],
-        ['Риск провала', `${(this.manager.failureChance(employee, s) * 100).toFixed(1)}%`], ['Офлайн', percent(archetypeFor(employee.archetype).offline)]]) {
+      for (const [label, value] of [[tr('company-ui.067'), archetypeFor(employee.archetype).name], [tr('progression-config.005'), employee.level],
+        [tr('company-config.035'), employee.level === COMPANY.employeeMaxLevel ? tr('company-ui.045') : `${Math.floor(employee.currentXp)} / ${employeeXpRequired(employee.level)}`],
+        [tr('company-config.033'), percent(this.manager.employeeEfficiency(employee, s))], [tr('company-ui.068'), percent(this.manager.employeeReliability(employee))],
+        [tr('company-ui.069'), percent(employee.speed)], [tr('company-ui.070'), companyVehicle(vehicle?.type)?.name || tr('company-ui.059')], [tr('company-config.031'), tr('company-ui.019', { v0: rubles(this.manager.employeeRate(employee, s)) })],
+        [tr('company-ui.071'), rubles(employee.totalEarned)], [tr('company-ui.072'), employee.successfulDeliveries], [tr('company-ui.024'), employee.failedDeliveries],
+        [tr('company-event-manager.010'), `${formatNumber(this.manager.failureChance(employee, s) * 100, { maximumFractionDigits: 1 })}%`], [tr('company-ui.073'), percent(archetypeFor(employee.archetype).offline)]]) {
         const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = label; dd.textContent = value; detail.append(dt, dd);
       }
       const f = this.manager.incomeFactors(employee, s);
-      text(card, '[data-income-formula]', `${rubles(f.base)} × транспорт ${f.transport.toFixed(2)} × эффективность ${f.efficiency.toFixed(3)} × скорость ${f.speed.toFixed(3)} × офис ${f.office.toFixed(2)} × компания ${f.company.toFixed(3)} × надёжность ${f.reliability.toFixed(3)} × районы ${f.districts.toFixed(2)} × наследие ${f.legacy.toFixed(2)} × события ${f.event.toFixed(2)}.\nСкорость даёт больший эффект на транспорте; надёжность уменьшает ожидаемые потери.`);
+      text(card, '[data-income-formula]', tr('company-ui.074', { v0: rubles(f.base), v1: formatNumber(f.transport, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), v2: formatNumber(f.efficiency, { minimumFractionDigits: 3, maximumFractionDigits: 3 }), v3: formatNumber(f.speed, { minimumFractionDigits: 3, maximumFractionDigits: 3 }), v4: formatNumber(f.office, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), v5: formatNumber(f.company, { minimumFractionDigits: 3, maximumFractionDigits: 3 }), v6: formatNumber(f.reliability, { minimumFractionDigits: 3, maximumFractionDigits: 3 }), v7: formatNumber(f.districts, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), v8: formatNumber(f.legacy, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), v9: formatNumber(f.event, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }));
     }
   }
 

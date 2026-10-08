@@ -1,3 +1,4 @@
+import { t as tr } from '../services/LocalizationService.js';
 import { ModalUI } from './ModalUI.js';
 
 export class EventHistoryUI extends ModalUI {
@@ -6,7 +7,7 @@ export class EventHistoryUI extends ModalUI {
     this.render = () => {
       const history = this.dialog.querySelector('#event-history');
       history.replaceChildren();
-      if (!events.history.length) history.textContent = 'Пока без приключений. Подозрительно спокойно.';
+      if (!events.history.length) history.textContent = tr('event-history-ui.001');
       for (const event of events.history) {
         const row = document.createElement('p');
         row.textContent = `${event.bad ? '−' : '+'} ${event.title}: ${event.text}`;

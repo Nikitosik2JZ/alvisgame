@@ -1,3 +1,4 @@
+import { t as tr } from '../services/LocalizationService.js';
 // Readable layouts share roads and entrances. Buildings are the only physics obstacles.
 export const WORLD = { width: 2400, height: 2000, spawn: { x: 1200, y: 1000 } };
 const BASE_BLOCKS = [
@@ -15,19 +16,19 @@ const BASE_BLOCKS = [
 ];
 const offices = name => [250, 650, 1050, 1450, 1850].map(x => ({ x, y: 100, w: 160, h: 110, name }));
 export function districtLayout(id = 'residential') {
-  let blocks = BASE_BLOCKS.map(b => ({ ...b }));
+  let blocks = BASE_BLOCKS.map(b => ({ ...b, label: tr(`world.${b.name}`) }));
   let streetsX = [360, 1200, 2040], streetsY = [320, 1000, 1680];
   if (id === 'center' || id === 'business') {
     streetsX.push(1960); streetsY.push(1800);
-    blocks.push(...offices(id === 'business' ? 'БИЗНЕС-ЦЕНТР' : 'ОФИСЫ'));
+    blocks.push(...offices(id === 'business' ? tr('district-layouts.001') : tr('district-layouts.002')));
   }
   if (id === 'industrial') {
     blocks = blocks.filter(b => !['POST OFFICE', 'STUDIOS'].includes(b.name) && b.x !== 850);
     blocks.filter(b => b.x === 565).forEach(b => { b.w = 490; });
-    blocks.push({ x: 1365, y: 505, w: 245, h: 240, name: 'ЦЕХ № 7' });
-    blocks = blocks.map(b => ({ ...b, label: b.name === 'HOMES' ? 'СКЛАД' : 'ЛОГИСТИКА' }));
+    blocks.push({ x: 1365, y: 505, w: 245, h: 240, name: tr('district-layouts.003') });
+    blocks = blocks.map(b => ({ ...b, label: b.name === 'HOMES' ? tr('district-layouts.004') : tr('district-layouts.005') }));
   } else if (id === 'elite') {
-    blocks = blocks.map(b => ({ ...b, x: b.x + 22, y: b.y + 25, w: b.w - 44, h: b.h - 50, label: 'ВИЛЛА' }));
-  } else if (id === 'business') blocks = blocks.map(b => ({ ...b, label: 'ОФИСНАЯ БАШНЯ' }));
+    blocks = blocks.map(b => ({ ...b, x: b.x + 22, y: b.y + 25, w: b.w - 44, h: b.h - 50, label: tr('district-layouts.006') }));
+  } else if (id === 'business') blocks = blocks.map(b => ({ ...b, label: tr('district-layouts.007') }));
   return { blocks, streetsX, streetsY, greenery: id === 'elite' ? 'formal' : id === 'industrial' ? 'yard' : id === 'business' ? 'plaza' : 'park' };
 }

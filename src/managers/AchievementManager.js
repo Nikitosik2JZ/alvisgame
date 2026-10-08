@@ -1,3 +1,4 @@
+import { t as tr, formatMoney } from '../services/LocalizationService.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { CAREER_MILESTONES, GLOBAL_GOALS, RECORD_SETTINGS, requirement as r } from '../config/progressionConfig.js';
 import { LEGACY_UPGRADES } from '../config/legacyConfig.js';
@@ -35,8 +36,8 @@ export function progressValue(s, source) {
 export const requirementsProgress = (s, definition) => definition.requirements.map(req => ({ ...req,
   current: req.source === 'reputation' ? s.reputation : req.source === 'employees' ? s.employees.length : progressValue(s, req.source) }));
 export const completionRatio = rows => rows.length ? rows.reduce((sum, row) => sum + Math.min(1, row.current / row.target), 0) / rows.length : 1;
-export const rewardText = reward => [reward.money && `+${reward.money} ₽`, reward.xp && `+${reward.xp} XP`,
-  reward.reputation && `+${reward.reputation} реп.`, reward.legacy && `+${reward.legacy} очк. наследия`, reward.title && `Титул: ${reward.title}`].filter(Boolean).join(' · ') || 'Титул';
+export const rewardText = reward => [reward.money && `+${formatMoney(reward.money)}`, reward.xp && tr('common.xpReward', { amount: reward.xp }),
+  reward.reputation && tr('achievement-manager.001', { v0: reward.reputation }), reward.legacy && tr('achievement-manager.002', { v0: reward.legacy }), reward.title && tr('achievement-manager.003', { v0: reward.title })].filter(Boolean).join(' · ') || tr('achievement-manager.004');
 export const availableTitles = s => [...CAREER_MILESTONES.filter(m => s.careerMilestones.includes(m.id)).map(m => ({ id: `career:${m.id}`, title: m.title })),
   ...ACHIEVEMENTS.filter(a => a.reward.title && s.achievements.includes(a.id)).map(a => ({ id: `achievement:${a.id}`, title: a.reward.title }))];
 export const selectedTitle = s => availableTitles(s).find(t => t.id === s.selectedTitle)?.title || null;
@@ -82,7 +83,7 @@ export class AchievementManager {
   }
   claim(id, career = false) {
     const definition = (career ? CAREER_MILESTONES : ACHIEVEMENTS).find(d => d.id === id);
-    if (!definition || this.status(definition, career) !== 'COMPLETED') return { ok: false, reason: 'Награда недоступна или уже получена' };
+    if (!definition || this.status(definition, career) !== 'COMPLETED') return { ok: false, reason: tr('achievement-manager.005') };
     const s = this.state.values, reward = definition.reward;
     // Mark before applying rewards or notifying subscribers; one persisted transaction.
     (career ? s.claimedCareerRewards : s.claimedAchievementRewards).push(id);
@@ -93,15 +94,15 @@ export class AchievementManager {
   }
   buyLegacy(id) {
     const u = LEGACY_UPGRADES.find(u => u.id === id), s = this.state.values;
-    if (!u) return { ok: false, reason: 'Улучшение не найдено' };
-    if (s.legacyUpgrades.includes(id)) return { ok: false, reason: 'Уже изучено' };
-    if (s.legacyPoints < u.cost) return { ok: false, reason: 'Не хватает очков наследия' };
+    if (!u) return { ok: false, reason: tr('achievement-manager.006') };
+    if (s.legacyUpgrades.includes(id)) return { ok: false, reason: tr('achievement-manager.007') };
+    if (s.legacyPoints < u.cost) return { ok: false, reason: tr('achievement-manager.008') };
     this.state.beforeProgressionPurchase?.();
     s.legacyPoints -= u.cost; s.legacyUpgrades.push(id); this.state.refresh();
     return { ok: true };
   }
   selectTitle(id) {
-    if (id !== null && !availableTitles(this.state.values).some(t => t.id === id)) return { ok: false, reason: 'Титул ещё не открыт' };
+    if (id !== null && !availableTitles(this.state.values).some(t => t.id === id)) return { ok: false, reason: tr('achievement-manager.009') };
     this.state.values.selectedTitle = id; this.state.refresh(); return { ok: true };
   }
   delivery({ reward, distance, elapsedSeconds, orderMoney = reward, type }) {
@@ -129,21 +130,21 @@ export class AchievementManager {
   }
   suggestedGoal() {
     const s = this.state.values, nextTransport = TRANSPORTS.find(t => !s.ownedTransports.includes(t.id));
-    if (nextTransport) return { title: `Купить ${nextTransport.name.toLowerCase()}`, requirements: [r('level', nextTransport.requiredLevel, 'Уровень'), { source: 'wallet', target: nextTransport.purchasePrice, label: 'Деньги' }] };
+    if (nextTransport) return { title: tr('achievement-manager.010', { v0: nextTransport.name.toLowerCase() }), requirements: [r('level', nextTransport.requiredLevel, tr('progression-config.005')), { source: 'wallet', target: nextTransport.purchasePrice, label: tr('achievement-manager.011') }] };
     const nextDistrict = Object.entries(DISTRICTS).find(([id]) => !s.unlockedDistricts.includes(id));
     if (nextDistrict) {
       const [, d] = nextDistrict;
-      return { title: `Открыть ${d.name}`, requirements: [r('level', d.level, 'Уровень'), r('reputation', d.reputation, 'Репутация'),
-        r('wallet', d.cost, 'Деньги'), ...(d.requiredOwnedTransports ? [r('motorTransport', 1, 'Мопед или автомобиль')] : [])].filter(req => req.target > 0) };
+      return { title: tr('achievement-manager.012', { v0: d.name }), requirements: [r('level', d.level, tr('progression-config.005')), r('reputation', d.reputation, tr('progression-config.006')),
+        r('wallet', d.cost, tr('achievement-manager.011')), ...(d.requiredOwnedTransports ? [r('motorTransport', 1, tr('achievement-manager.013'))] : [])].filter(req => req.target > 0) };
     }
-    if (!s.companyUnlocked) return { title: 'Открыть компанию', requirements: [r('level', COMPANY.unlockLevel, 'Уровень'), r('wallet', COMPANY.unlockPrice, 'Деньги')] };
+    if (!s.companyUnlocked) return { title: tr('progression-config.019'), requirements: [r('level', COMPANY.unlockLevel, tr('progression-config.005')), r('wallet', COMPANY.unlockPrice, tr('achievement-manager.011'))] };
     const milestone = CAREER_MILESTONES.find(m => !s.careerMilestones.includes(m.id)) || GLOBAL_GOALS.find(g => completionRatio(requirementsProgress(s, g)) < 1);
     if (milestone) return milestone;
     if (progressValue(s, 'minMastery') < DISTRICT_MASTERY.at(-1).min)
-      return { title: 'Развивайте мастерство во всех районах', requirements: [r('minMastery', DISTRICT_MASTERY.at(-1).min, 'Доставки в каждом районе')] };
+      return { title: tr('achievement-manager.014'), requirements: [r('minMastery', DISTRICT_MASTERY.at(-1).min, tr('achievement-manager.015'))] };
     const achievement = ACHIEVEMENTS.find(a => !a.hidden && !s.achievements.includes(a.id));
     return achievement ? { title: achievement.title, requirements: [r(achievement.source, achievement.target, achievement.description)] }
-      : { title: 'Все большие цели достигнуты. Улучшайте рекорды доставки и дохода компании!', requirements: [] };
+      : { title: tr('achievement-manager.016'), requirements: [] };
   }
   suggestedRequirements() {
     const s = this.state.values;

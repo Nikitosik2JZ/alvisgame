@@ -1,7 +1,8 @@
+import { t as tr } from '../services/LocalizationService.js';
 export const LEGACY_UPGRADES = [
-  { id: 'experience', title: 'Опытный курьер', cost: 1, effect: 'xp', bonus: .03, description: '+3% личного опыта' },
-  { id: 'reputation', title: 'Хорошая репутация', cost: 2, effect: 'reputation', bonus: .05, description: '+5% наград репутации' },
-  { id: 'business', title: 'Деловая хватка', cost: 2, effect: 'companyIncome', bonus: .03, description: '+3% дохода компании, включая офлайн' },
-  { id: 'tips', title: 'Щедрые клиенты', cost: 3, effect: 'tips', bonus: .05, description: '+5% чаевых' },
-  { id: 'city', title: 'Знание города', cost: 3, effect: 'speed', bonus: .03, description: '+3% скорости движения' },
+  { id: 'experience', title: tr('legacy-config.001'), cost: 1, effect: 'xp', bonus: .03, description: tr('legacy-config.002') },
+  { id: 'reputation', title: tr('legacy-config.003'), cost: 2, effect: 'reputation', bonus: .05, description: tr('legacy-config.004') },
+  { id: 'business', title: tr('legacy-config.005'), cost: 2, effect: 'companyIncome', bonus: .03, description: tr('legacy-config.006') },
+  { id: 'tips', title: tr('legacy-config.007'), cost: 3, effect: 'tips', bonus: .05, description: tr('legacy-config.008') },
+  { id: 'city', title: tr('legacy-config.009'), cost: 3, effect: 'speed', bonus: .03, description: tr('legacy-config.010') },
 ];

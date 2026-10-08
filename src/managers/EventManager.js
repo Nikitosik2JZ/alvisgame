@@ -1,3 +1,4 @@
+import { t as tr } from '../services/LocalizationService.js';
 import { EVENTS } from '../data/events.js';
 import { EVENT_BALANCE as B } from '../config/eventBalance.js';
 import { DISTRICTS, reputationTier } from '../config/economyConfig.js';
@@ -75,25 +76,25 @@ export class EventManager {
     const outcome = {};
     const range = ([min, max]) => min + Math.floor(this.random() * (max - min + 1));
     if (effects.dispute) {
-      if (this.random() < tier.dispute) { outcome.disputeWon = true; lines.push('ПОДДЕРЖКА НА ВАШЕЙ СТОРОНЕ\nШтраф отменён.'); }
-      else { effects.money = -B.colaFine; effects.reputation = B.colaReputation; lines.push('Поддержка поверила клиенту.'); }
+      if (this.random() < tier.dispute) { outcome.disputeWon = true; lines.push(tr('event-manager.001')); }
+      else { effects.money = -B.colaFine; effects.reputation = B.colaReputation; lines.push(tr('event-manager.002')); }
     }
     if (effects.gamble === 'fries') {
-      if (this.random() < B.friesCaught) { outcome.friesCaught = true; effects.money = -B.friesFine; effects.reputation = B.friesReputation; lines.push('Клиент пересчитал картошку. Одной не хватает!'); }
-      else { outcome.friesEscaped = true; lines.push('Картошка исчезла без свидетелей. Совесть всё видела.'); }
+      if (this.random() < B.friesCaught) { outcome.friesCaught = true; effects.money = -B.friesFine; effects.reputation = B.friesReputation; lines.push(tr('event-manager.003')); }
+      else { outcome.friesEscaped = true; lines.push(tr('event-manager.004')); }
     }
     if (effects.gamble === 'door' || effects.gamble === 'call') {
       const chance = effects.gamble === 'door' ? B.doorComplaint : 1 - B.callSuccess;
-      if (this.random() < chance) { effects.reputation = B.complaintReputation; lines.push('Клиент пожаловался: «А где торжественная передача?»'); }
-      else lines.push('Клиент получил заказ. Связь с человечеством восстановлена.');
+      if (this.random() < chance) { effects.reputation = B.complaintReputation; lines.push(tr('event-manager.005')); }
+      else lines.push(tr('event-manager.006'));
     }
     if (effects.eliteSecurity) {
-      if (s.reputation >= B.district.eliteSkipReputation) lines.push('ВАС УЗНАЛИ! Проходите без ожидания.');
+      if (s.reputation >= B.district.eliteSkipReputation) lines.push(tr('event-manager.007'));
       else effects.time = B.district.eliteWaitTime;
     }
     if (effects.businessCall) {
-      if (this.random() < B.district.businessCallSuccess) lines.push('Клиент подтвердил пропуск. Проходите!');
-      else { effects.time = B.district.businessCallTime; lines.push('Клиент ищет заявку. Небольшая задержка.'); }
+      if (this.random() < B.district.businessCallSuccess) lines.push(tr('event-manager.008'));
+      else { effects.time = B.district.businessCallTime; lines.push(tr('event-manager.009')); }
     }
     if (effects.moneyRange) effects.money = range(effects.moneyRange);
     if (effects.tips) effects.money = Math.round(range(effects.tips) * tier.tips * DISTRICTS[s.selectedDistrict].tip * (this.orders.getTarget() ? this.orders.order.tipMultiplier || 1 : 1) * progressionMultiplier(s, 'tips'));
@@ -101,30 +102,30 @@ export class EventManager {
     if (effects.money) {
       const actual = this.state.applyEventMoney(effects.money, Boolean(effects.tips));
       if (effects.money > 0 && this.orders.getTarget()) this.orders.order.eventIncome = (this.orders.order.eventIncome || 0) + actual;
-      lines.push(effects.money < 0 ? `ШТРАФ: ${-effects.money} ₽\nСписано: ${actual} ₽${actual < -effects.money ? '\nБаланс исчерпан' : ''}` : `БОНУС / ЧАЕВЫЕ: +${actual} ₽`);
+      lines.push(effects.money < 0 ? tr('event-manager.011', { v0: -effects.money, v1: actual, v2: actual < -effects.money ? tr('event-manager.010') : '' }) : tr('event-manager.012', { v0: actual }));
     }
     if (effects.reputation) {
       effects.reputation = reputationReward(this.state.values, effects.reputation);
       this.state.tasks.gameplayEvent(effects.reputation > 0 ? 'reputation' : 'negativeReputation', { amount: effects.reputation });
       if (effects.reputation < 0 && this.orders.order) this.orders.order.negativeReputation = true;
-      this.state.update({ reputation: s.reputation + effects.reputation }); lines.push(`РЕПУТАЦИЯ: ${effects.reputation > 0 ? '+' : ''}${effects.reputation}`);
+      this.state.update({ reputation: s.reputation + effects.reputation }); lines.push(tr('event-manager.013', { v0: effects.reputation > 0 ? '+' : '', v1: effects.reputation }));
     }
     const order = this.orders.getTarget() ? this.orders.order : null;
     if (effects.time) {
-      if (order) { order.deadline -= effects.time * 1000; lines.push(`ВРЕМЯ ЗАКАЗА: −${effects.time} сек.`); }
-      else lines.push('Активного заказа нет — время не списано.');
+      if (order) { order.deadline -= effects.time * 1000; lines.push(tr('event-manager.014', { v0: effects.time })); }
+      else lines.push(tr('event-manager.015'));
     }
     if (effects.payment) {
-      if (order) { order.paymentPenalty = effects.payment; lines.push(`ОПЛАТА ЗАКАЗА: ${Math.round(effects.payment * 100)}%`); }
-      else lines.push('Активного заказа нет — оплата не изменена.');
+      if (order) { order.paymentPenalty = effects.payment; lines.push(tr('event-manager.016', { v0: Math.round(effects.payment * 100) })); }
+      else lines.push(tr('event-manager.017'));
     }
     if (effects.orderBonus) {
-      if (order) { order.extraMoney = (order.extraMoney || 0) + effects.orderBonus; lines.push(`ДОПЛАТА ПРИ УСПЕХЕ: +${effects.orderBonus} ₽`); }
-      else lines.push('Доплата доступна только при активном заказе.');
+      if (order) { order.extraMoney = (order.extraMoney || 0) + effects.orderBonus; lines.push(tr('event-manager.018', { v0: effects.orderBonus })); }
+      else lines.push(tr('event-manager.019'));
     }
-    if (effects.demand) { this.state.setDemand(effects.demand); if (order) order.skipDemand = true; lines.push(`СПРОС: +${B.demandBonus * 100}% на ${effects.demand} следующих успешных заказа`); }
-    if (effects.closeOrder) { this.state.nextCloseOrder = true; lines.push(`СЛЕДУЮЩИЙ ЗАКАЗ: ближайший клиент · +${Math.round((B.closeOrderMoney-1)*100)}% оплаты`); }
-    if (effects.largeOrderBoost) { this.state.setLargeOrderBoost(effects.largeOrderBoost); lines.push('Следующий заказ на автомобиле: повышен шанс крупной доставки.'); }
+    if (effects.demand) { this.state.setDemand(effects.demand); if (order) order.skipDemand = true; lines.push(tr('event-manager.020', { v0: B.demandBonus * 100, v1: effects.demand })); }
+    if (effects.closeOrder) { this.state.nextCloseOrder = true; lines.push(tr('event-manager.021', { v0: Math.round((B.closeOrderMoney-1)*100) })); }
+    if (effects.largeOrderBoost) { this.state.setLargeOrderBoost(effects.largeOrderBoost); lines.push(tr('event-manager.022')); }
     if (effects.speed) {
       const kind = effects.speed;
       const settings = { green: [B.greenSpeed, B.greenDuration], puncture: [B.punctureSpeed, B.punctureDuration],
@@ -132,7 +133,7 @@ export class EventManager {
       const [value, duration] = settings[kind];
       this.modifiers.add(event.id, value, duration, kind === 'rain' ? null : event.requirements?.transports || (kind === 'puncture' ? 'BICYCLE' : null),
         kind === 'rain' ? Object.fromEntries(TRANSPORTS.map(t => [t.id, t.weatherModifier])) : null);
-      lines.push(`СКОРОСТЬ: ${Math.round((value - 1) * 100)}% · ${duration} сек.`);
+      lines.push(tr('event-manager.023', { v0: Math.round((value - 1) * 100), v1: duration }));
     }
     const bad = (effects.money || 0) < 0 || (effects.reputation || 0) < 0 || effects.time || effects.payment || (effects.speed && effects.speed !== 'green');
     this.negativeStreak = bad ? this.negativeStreak + 1 : 0;
@@ -142,7 +143,7 @@ export class EventManager {
     if (event.category === 'CHOICE' && !bad) this.state.tasks.gameplayEvent('choiceSuccess');
     this.state.progression.event({ ...outcome, friesHonest: event.id === 'fries' && choice === 0,
       rarity: event.rarity, positive: event.category === 'POSITIVE', bad: Boolean(bad) });
-    this.history.unshift({ title: event.title, text: lines.join('\n') || 'Обычная доставка. Без штрафов.', bad: Boolean(bad) });
+    this.history.unshift({ title: event.title, text: lines.join('\n') || tr('event-manager.024'), bad: Boolean(bad) });
     this.history.length = Math.min(this.history.length, B.historyLimit);
     this.active.resolved = true;
     return this.history[0].text;

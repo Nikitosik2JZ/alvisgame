@@ -1,3 +1,5 @@
+import { t as tr } from '../services/LocalizationService.js';
+import { encodeMessage, message } from '../services/LocalizedMessages.js';
 import { COMPANY, companyLevel, companyName, companyVehicle, archetypeFor, clampStat, employeeXpRequired, upgradeEffect } from '../config/companyConfig.js';
 import { normalizeEmployee } from '../state/companyState.js';
 import { CompanyEventManager } from './CompanyEventManager.js';
@@ -45,7 +47,7 @@ export class CompanyManager {
   }
   incomeRate(snapshot = this.state.values) { return snapshot.employees.reduce((sum, employee) => sum + this.employeeRate(employee, snapshot), 0); }
   storageLimit(snapshot = this.state.values) { return Math.floor(snapshot.employees.reduce((sum, e) => sum + this.employeeRate(e, snapshot, true), 0) * COMPANY.storageCapMs / 60000); }
-  log(message) { this.state.values.companyLog.unshift(message.slice(0, 160)); this.state.values.companyLog.length = Math.min(COMPANY.logLimit, this.state.values.companyLog.length); }
+  log(message) { this.state.values.companyLog.unshift(encodeMessage(message)); this.state.values.companyLog.length = Math.min(COMPANY.logLimit, this.state.values.companyLog.length); }
 
   reputation(delta) { this.state.values.companyReputation = Math.max(0, this.state.values.companyReputation + delta); }
   addXp(employee, xp) {
@@ -53,7 +55,7 @@ export class CompanyManager {
     employee.currentXp += xp;
     while (employee.level < COMPANY.employeeMaxLevel && employee.currentXp >= employeeXpRequired(employee.level)) {
       employee.currentXp -= employeeXpRequired(employee.level); employee.level++;
-      this.log(`${employee.name}: уровень ${employee.level}!`);
+      this.log(message('company-manager.001', { v0: employee.name, v1: employee.level }));
     }
     if (employee.level === COMPANY.employeeMaxLevel) employee.currentXp = 0;
   }
@@ -99,7 +101,7 @@ export class CompanyManager {
     s.companyEffects = s.companyEffects.filter(e => e.until > s.companyActiveTimeMs);
     for (const employee of s.employees) if (employee.status === 'TEMPORARILY_UNAVAILABLE' && employee.unavailableUntil <= s.companyActiveTimeMs) {
       employee.status = 'WORKING'; employee.unavailableUntil = 0;
-      this.log(employee.recoveryMessage || `${employee.name} вернулся на линию.`); employee.recoveryMessage = '';
+      this.log(employee.recoveryMessage || message('company-manager.002', { v0: employee.name })); employee.recoveryMessage = '';
     }
   }
   accrue(elapsed, offline = false) {
@@ -138,7 +140,7 @@ export class CompanyManager {
     this.offlineEarned = this.accrue(elapsed, true);
     this.offlineNoticeShown = false;
     s.lastCompanyUpdateTimestamp = wall;
-    if (this.offlineEarned > 0) this.log(`Пока вас не было: +${this.offlineEarned} ₽.`);
+    if (this.offlineEarned > 0) this.log(message('company-manager.003', { v0: this.offlineEarned }));
     this.state.refresh();
     return this.offlineEarned;
   }
@@ -180,7 +182,7 @@ export class CompanyManager {
     window.removeEventListener('pagehide', this.onPageHide);
   }
 
-  requireCompany() { return this.state.values.companyUnlocked ? null : { ok: false, reason: 'Сначала откройте компанию' }; }
+  requireCompany() { return this.state.values.companyUnlocked ? null : { ok: false, reason: tr('company-manager.004') }; }
   spend(price) {
     if (this.state.values.money < price) return false;
     this.state.values.money -= price; return true;
@@ -203,19 +205,19 @@ export class CompanyManager {
   refreshCandidates(debug = false) {
     const blocked = this.requireCompany(); if (blocked) return blocked;
     const s = this.state.values, price = s.candidateRefreshes === 0 ? 0 : COMPANY.refreshCost;
-    if (!debug && !this.spend(price)) return { ok: false, reason: 'Не хватает денег на обновление кандидатов' };
+    if (!debug && !this.spend(price)) return { ok: false, reason: tr('company-manager.005') };
     if (!debug) s.candidateRefreshes++;
     this.generateCandidates(); this.state.refresh(); return { ok: true };
   }
 
   openCompany(name) {
     const s = this.state.values;
-    if (s.companyUnlocked) return { ok: false, reason: 'Компания уже открыта' };
-    if (s.level < COMPANY.unlockLevel) return { ok: false, reason: `Требуется уровень ${COMPANY.unlockLevel}` };
-    if (!this.spend(COMPANY.unlockPrice)) return { ok: false, reason: 'Не хватает денег на открытие компании' };
+    if (s.companyUnlocked) return { ok: false, reason: tr('company-manager.006') };
+    if (s.level < COMPANY.unlockLevel) return { ok: false, reason: tr('company-manager.007', { v0: COMPANY.unlockLevel }) };
+    if (!this.spend(COMPANY.unlockPrice)) return { ok: false, reason: tr('company-manager.008') };
     s.companyUnlocked = true; s.companyName = companyName(name); s.lastCompanyUpdateTimestamp = this.wallNow(); this.lastTick = this.now();
     this.generateCandidates();
-    this.log('Собственная служба доставки открыта. Пора нанимать людей.'); this.state.refresh();
+    this.log(message('company-manager.009')); this.state.refresh();
     return { ok: true };
   }
   rename(name) {
@@ -225,61 +227,61 @@ export class CompanyManager {
   hire(candidateId = this.candidate()?.id) {
     const blocked = this.requireCompany(); if (blocked) return blocked;
     this.tick(); const s = this.state.values;
-    if (s.employees.length >= companyLevel(s.officeLevel).slots) return { ok: false, reason: 'НЕТ СВОБОДНЫХ МЕСТ. Улучшите офис.' };
+    if (s.employees.length >= companyLevel(s.officeLevel).slots) return { ok: false, reason: tr('company-manager.010') };
     const candidate = s.companyCandidates.find(c => c.id === candidateId);
-    if (!candidate) return { ok: false, reason: 'Кандидат больше не доступен' };
-    if (!this.spend(candidate.price)) return { ok: false, reason: 'Не хватает денег на найм' };
+    if (!candidate) return { ok: false, reason: tr('company-manager.011') };
+    if (!this.spend(candidate.price)) return { ok: false, reason: tr('company-manager.012') };
     const employee = normalizeEmployee({ ...candidate, id: this.nextId('courier', s.employees) });
     s.companyCandidates = s.companyCandidates.filter(c => c.id !== candidate.id);
     s.employees.push(employee); s.companyStats.employeesHired++;
-    this.log(`${employee.name} вышел на линию.${s.employees.length === 1 ? ' Первый курьер компании!' : ''}`);
+    this.log(message('company-manager.014', { v0: employee.name, v1: s.employees.length === 1 ? message('company-manager.013') : '' }));
     s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
     this.state.refresh(); return { ok: true, employee: { ...employee } };
   }
   buyVehicle(type) {
     const blocked = this.requireCompany(); if (blocked) return blocked;
-    const vehicle = companyVehicle(type); if (!vehicle) return { ok: false, reason: 'Транспорт компании не найден' };
+    const vehicle = companyVehicle(type); if (!vehicle) return { ok: false, reason: tr('company-manager.015') };
     this.tick(); const s = this.state.values;
-    if (s.companyVehicles.length >= 1000) return { ok: false, reason: 'Автопарк заполнен' };
-    if (!this.spend(vehicle.price)) return { ok: false, reason: 'Не хватает денег на транспорт компании' };
+    if (s.companyVehicles.length >= 1000) return { ok: false, reason: tr('company-manager.016') };
+    if (!this.spend(vehicle.price)) return { ok: false, reason: tr('company-manager.017') };
     s.companyVehicles.push({ id: this.nextId('vehicle', s.companyVehicles), type });
-    this.log(`Куплен ${vehicle.name.toLowerCase()} для компании.`); this.state.refresh(); return { ok: true };
+    this.log(message('company-manager.018', { v0: encodeMessage(vehicle.name) })); this.state.refresh(); return { ok: true };
   }
   assignVehicle(employeeId, vehicleId = null) {
     const blocked = this.requireCompany(); if (blocked) return blocked;
     const s = this.state.values, employee = s.employees.find(e => e.id === employeeId);
-    if (!employee) return { ok: false, reason: 'Курьер не найден' };
-    if (vehicleId !== null && !s.companyVehicles.some(v => v.id === vehicleId)) return { ok: false, reason: 'Транспорт не принадлежит компании' };
-    if (vehicleId !== null && s.employees.some(e => e.id !== employeeId && e.assignedTransport === vehicleId)) return { ok: false, reason: 'Транспорт занят. Сначала переведите другого курьера на пешие доставки.' };
+    if (!employee) return { ok: false, reason: tr('company-manager.019') };
+    if (vehicleId !== null && !s.companyVehicles.some(v => v.id === vehicleId)) return { ok: false, reason: tr('company-manager.020') };
+    if (vehicleId !== null && s.employees.some(e => e.id !== employeeId && e.assignedTransport === vehicleId)) return { ok: false, reason: tr('company-manager.021') };
     this.tick(); employee.assignedTransport = vehicleId;
     const type = s.companyVehicles.find(v => v.id === vehicleId)?.type;
     s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
-    this.log(`${employee.name}: ${companyVehicle(type)?.name || 'пешие доставки'}.`); this.state.refresh(); return { ok: true };
+    this.log(message('company.log.assignment', { name: encodeMessage(employee.name), vehicle: encodeMessage(companyVehicle(type)?.name || tr('company-manager.022')) })); this.state.refresh(); return { ok: true };
   }
   collect() {
     const blocked = this.requireCompany(); if (blocked) return blocked;
     this.tick(); const s = this.state.values, amount = s.companyBalance;
-    if (amount <= 0) return { ok: false, reason: 'Доход пока не накоплен' };
+    if (amount <= 0) return { ok: false, reason: tr('company-manager.023') };
     s.money += amount; s.companyBalance = 0; s.companyStats.totalIncomeCollected += amount;
     this.state.tasks.gameplayEvent('companyCollect', { amount });
-    this.offlineEarned = 0; this.log(`Забрано ${amount} ₽ дохода компании.`); this.state.refresh(); return { ok: true, amount };
+    this.offlineEarned = 0; this.log(message('company-manager.024', { v0: amount })); this.state.refresh(); return { ok: true, amount };
   }
   upgrade() {
     const blocked = this.requireCompany(); if (blocked) return blocked;
     this.tick(); const s = this.state.values, next = COMPANY.levels.find(level => level.level === s.officeLevel + 1);
-    if (!next) return { ok: false, reason: 'Достигнут максимальный уровень компании' };
-    if (!this.spend(next.price)) return { ok: false, reason: 'Не хватает денег на улучшение' };
+    if (!next) return { ok: false, reason: tr('company-manager.025') };
+    if (!this.spend(next.price)) return { ok: false, reason: tr('company-manager.026') };
     s.companyLevel = s.officeLevel = next.level; this.reputation(COMPANY.reputation.perUpgrade);
-    this.log(`Офис: ${next.name}.`); s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
+    this.log(message('company-manager.027', { v0: encodeMessage(next.name) })); s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
     this.state.refresh(); return { ok: true };
   }
   upgradeBranch(key) {
     const blocked = this.requireCompany(); if (blocked) return blocked;
-    if (!Object.hasOwn(COMPANY.upgrades, key)) return { ok: false, reason: 'Улучшение не найдено' };
+    if (!Object.hasOwn(COMPANY.upgrades, key)) return { ok: false, reason: tr('achievement-manager.006') };
     this.tick(); const s = this.state.values, config = COMPANY.upgrades[key], level = s.companyUpgrades[key];
-    if (level >= config.costs.length) return { ok: false, reason: 'Максимальный уровень улучшения' };
-    if (!this.spend(config.costs[level])) return { ok: false, reason: 'Не хватает денег на улучшение' };
-    s.companyUpgrades[key]++; this.reputation(COMPANY.reputation.perUpgrade); this.log(`${config.name}: уровень ${level + 1}.`);
+    if (level >= config.costs.length) return { ok: false, reason: tr('company-manager.028') };
+    if (!this.spend(config.costs[level])) return { ok: false, reason: tr('company-manager.026') };
+    s.companyUpgrades[key]++; this.reputation(COMPANY.reputation.perUpgrade); this.log(message('company-manager.029', { v0: encodeMessage(config.name), v1: level + 1 }));
     s.companyStats.highestIncomePerMinute = Math.max(s.companyStats.highestIncomePerMinute, this.incomeRate());
     this.state.refresh(); return { ok: true };
   }
